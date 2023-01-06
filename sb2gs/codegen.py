@@ -81,6 +81,8 @@ class CodeGen:
             self.input([1, [4, o["fields"]["COSTUME"][0]]])
         elif o["opcode"] == "looks_backdrops":
             self.input([1, [4, o["fields"]["BACKDROP"][0]]])
+        elif o["opcode"] == "sound_sounds_menu":
+            self.input([1, [4, o["fields"]["SOUND_MENU"][0]]])
         elif o["opcode"] == "procedures_definition":
             self.define(o)
         elif o["opcode"] == "procedures_call":
