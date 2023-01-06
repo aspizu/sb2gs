@@ -83,6 +83,8 @@ class CodeGen:
             self.input([1, [4, o["fields"]["BACKDROP"][0]]])
         elif o["opcode"] == "procedures_definition":
             self.define(o)
+        elif o["opcode"] == "procedures_call":
+            self.call(cast(MutatedBlock, o))
         elif o["opcode"] == "event_whenbroadcastreceived":
             self.broadcast(o)
         elif o["opcode"] == "control_if":
@@ -346,3 +348,11 @@ class CodeGen:
         self.next(o)
         self.indent -= 1
         self.write("}\n\n")
+
+    def call(self, o: MutatedBlock) -> None:
+        self.tabwrite(o["mutation"]["proccode"].split(" ")[0])
+        if o["inputs"]:
+            self.write(" ")
+        self.blockinputs(o)
+        self.write(";\n")
+        self.next(o)
