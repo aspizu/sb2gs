@@ -32,7 +32,10 @@ class CodeGen:
         self.tabwrite("listglobals " + ", ".join(listglobals) + ";\n")
         self.costumes(self.sprite["costumes"])
         for block in self.blocks.values():
-            if block["opcode"] in hats or block["opcode"] in ("procedures_definition",):
+            if block["opcode"] in hats or block["opcode"] in (
+                "procedures_definition",
+                "event_whenbroadcastreceived",
+            ):
                 self.block(block)
 
     def write(self, o: str) -> None:
@@ -80,6 +83,8 @@ class CodeGen:
             self.input([1, [4, o["fields"]["BACKDROP"][0]]])
         elif o["opcode"] == "procedures_definition":
             self.define(o)
+        elif o["opcode"] == "event_whenbroadcastreceived":
+            self.broadcast(o)
         elif o["opcode"] == "control_if":
             self.control_if(o)
         elif o["opcode"] == "control_repeat_until":
@@ -322,3 +327,12 @@ class CodeGen:
         self.next(o)
         self.indent -= 1
         self.tabwrite("}\n\n")
+
+    def broadcast(self, o: Block) -> None:
+        self.tabwrite("on ")
+        self.write(string(o["fields"]["BROADCAST_OPTION"][0]))
+        self.write(" {\n")
+        self.indent += 1
+        self.next(o)
+        self.indent -= 1
+        self.write("}\n\n")

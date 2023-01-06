@@ -2,7 +2,7 @@ globals my_variable;
 listglobals my_list;
 costumes "costume1.svg";
 
-onflag {
+on "message1" {
   switchbackdrop "backdrop1";
 }
 
