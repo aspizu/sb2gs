@@ -1,3 +1,4 @@
+import shutil
 import argparse
 from pathlib import Path
 
@@ -27,6 +28,7 @@ def main() -> None:
     args = parser.parse_args()
     input: Path = args.input
     output: Path = args.output
+    shutil.rmtree(output)
     Builder(input, output)
 
 
