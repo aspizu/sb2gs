@@ -307,7 +307,11 @@ class CodeGen:
     def define(self, o: Block) -> None:
         prototype = cast(MutatedBlock, self.blocks[o["inputs"]["custom_block"][1]])
         print(prototype)
-        self.tabwrite("def " + prototype["mutation"]["proccode"].split(" ")[0] + " ")
+        if not json.loads(prototype["mutation"]["warp"]):
+            self.tabwrite("nowarp def ")
+        else:
+            self.tabwrite("def ")
+        self.write(prototype["mutation"]["proccode"].split(" ")[0] + " ")
         self.write(", ".join(json.loads(prototype["mutation"]["argumentnames"])))
         self.write(" {\n")
         self.indent += 1

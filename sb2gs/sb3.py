@@ -17,6 +17,7 @@ class Block(TypedDict):
 class Mutation(TypedDict):
     proccode: str
     argumentnames: str
+    warp: str
 
 
 class MutatedBlock(Block):
