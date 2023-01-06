@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# sb2gs
+*.sb3
+!test.sb3
