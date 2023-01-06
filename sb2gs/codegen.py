@@ -66,7 +66,7 @@ class CodeGen:
             block: str = o[1]
             self.block(self.blocks[block])
         # STRING LITERAL
-        elif o[0] == 1 and o[1][0] in (4, 6, 7, 10, 11):
+        elif o[0] == 1 and o[1][0] in (4, 5, 6, 7, 10, 11):
             string: str = o[1][1]
             self.write(literal(string))
         # VARIABLE REPORTER
@@ -75,7 +75,6 @@ class CodeGen:
             self.write(variable)
 
     def block(self, o: Block | MutatedBlock) -> None:
-        print(o)
         if o["opcode"] == "argument_reporter_string_number":
             self.argument(o)
         elif o["opcode"] == "looks_costume":
