@@ -2,10 +2,7 @@ globals my_variable;
 listglobals my_list;
 costumes "costume1.svg";
 
-nowarp def BlockName a, b, c {
-  goto $a, add($b, $c);
-}
-
 onflag {
+  switchcostume "costume1";
 }
 

@@ -58,14 +58,14 @@ class CodeGen:
         self.write(";\n\n")
 
     def input(self, o: Input) -> None:
-        # STRING LITERAL
-        if o[0] == 1 and o[1][0] in (4, 6, 7, 10):
-            string: str = o[1][1]
-            self.write(literal(string))
         # BLOCK
-        elif o[0] in (2, 3) and isinstance(o[1], str):
+        if o[0] in (1, 2, 3) and isinstance(o[1], str):
             block: str = o[1]
             self.block(self.blocks[block])
+        # STRING LITERAL
+        elif o[0] == 1 and o[1][0] in (4, 6, 7, 10, 11):
+            string: str = o[1][1]
+            self.write(literal(string))
         # VARIABLE REPORTER
         elif o[0] == 3 and o[1][0] == 12:
             variable: str = o[1][1]
@@ -74,6 +74,8 @@ class CodeGen:
     def block(self, o: Block | MutatedBlock) -> None:
         if o["opcode"] == "argument_reporter_string_number":
             self.argument(o)
+        elif o["opcode"] == "looks_costume":
+            self.input([1, [4, o["fields"]["COSTUME"][0]]])
         elif o["opcode"] == "procedures_definition":
             self.define(o)
         elif o["opcode"] == "control_if":
