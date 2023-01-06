@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -10,7 +11,7 @@ class Builder:
     def __init__(self, input: Path, output: Path) -> None:
         self.input = input
         self.output = output
-        output.rmdir()
+        shutil.rmtree(output)
         output.mkdir()
 
         with ZipFile(self.input, "r") as sb3:
