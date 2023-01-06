@@ -10,6 +10,8 @@ class Builder:
     def __init__(self, input: Path, output: Path) -> None:
         self.input = input
         self.output = output
+        output.rmdir()
+        output.mkdir()
 
         with ZipFile(self.input, "r") as sb3:
             self.extract_costumes(sb3)
