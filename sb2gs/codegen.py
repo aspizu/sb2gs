@@ -76,6 +76,8 @@ class CodeGen:
             self.argument(o)
         elif o["opcode"] == "looks_costume":
             self.input([1, [4, o["fields"]["COSTUME"][0]]])
+        elif o["opcode"] == "looks_backdrops":
+            self.input([1, [4, o["fields"]["BACKDROP"][0]]])
         elif o["opcode"] == "procedures_definition":
             self.define(o)
         elif o["opcode"] == "control_if":
