@@ -75,6 +75,7 @@ class CodeGen:
             self.write(variable)
 
     def block(self, o: Block | MutatedBlock) -> None:
+        print(o)
         if o["opcode"] == "argument_reporter_string_number":
             self.argument(o)
         elif o["opcode"] == "looks_costume":
@@ -87,6 +88,8 @@ class CodeGen:
             self.broadcast(o)
         elif o["opcode"] == "control_if":
             self.control_if(o)
+        elif o["opcode"] == "control_if_else":
+            self.control_if_else(o)
         elif o["opcode"] == "control_repeat_until":
             self.control_repeat_until(o)
         elif o["opcode"] == "control_repeat":
@@ -95,6 +98,8 @@ class CodeGen:
             self.control_forever(o)
         elif o["opcode"] == "data_setvariableto":
             self.data_setvariableto(o)
+        elif o["opcode"] == "data_changevariableby":
+            self.data_changevariableby(o)
         elif o["opcode"] == "data_deletealloflist":
             self.data_deletealloflist(o)
         elif o["opcode"] == "data_addtolist":
@@ -178,7 +183,7 @@ class CodeGen:
         if o["inputs"]["SUBSTACK"][1]:
             self.block(self.blocks[o["inputs"]["SUBSTACK"][1]])
         self.indent -= 1
-        self.tabwrite("}\n\n")
+        self.tabwrite("}\n")
         self.next(o)
 
     def control_repeat(self, o: Block) -> None:
@@ -189,7 +194,7 @@ class CodeGen:
         if o["inputs"]["SUBSTACK"][1]:
             self.block(self.blocks[o["inputs"]["SUBSTACK"][1]])
         self.indent -= 1
-        self.tabwrite("}\n\n")
+        self.tabwrite("}\n")
         self.next(o)
 
     def control_forever(self, o: Block) -> None:
@@ -198,7 +203,7 @@ class CodeGen:
         if o["inputs"]["SUBSTACK"][1]:
             self.block(self.blocks[o["inputs"]["SUBSTACK"][1]])
         self.indent -= 1
-        self.tabwrite("}\n\n")
+        self.tabwrite("}\n")
         self.next(o)
 
     def control_repeat_until(self, o: Block) -> None:
@@ -209,7 +214,7 @@ class CodeGen:
         if o["inputs"]["SUBSTACK"][1]:
             self.block(self.blocks[o["inputs"]["SUBSTACK"][1]])
         self.indent -= 1
-        self.tabwrite("}\n\n")
+        self.tabwrite("}\n")
         self.next(o)
 
     def control_if_else(self, o: Block) -> None:
@@ -225,6 +230,7 @@ class CodeGen:
         if o["inputs"]["SUBSTACK2"][1]:
             self.block(self.blocks[o["inputs"]["SUBSTACK2"][1]])
         self.indent -= 1
+        self.tabwrite("}\n")
         self.next(o)
 
     def getopcode(self, opcodes: dict[str, str], block: Block) -> str:
@@ -251,6 +257,12 @@ class CodeGen:
 
     def data_setvariableto(self, o: Block) -> None:
         self.tabwrite(o["fields"]["VARIABLE"][0] + " = ")
+        self.blockinputs(o)
+        self.write(";\n")
+        self.next(o)
+
+    def data_changevariableby(self, o: Block) -> None:
+        self.tabwrite(o["fields"]["VARIABLE"][0] + " += ")
         self.blockinputs(o)
         self.write(";\n")
         self.next(o)
@@ -315,7 +327,6 @@ class CodeGen:
 
     def define(self, o: Block) -> None:
         prototype = cast(MutatedBlock, self.blocks[o["inputs"]["custom_block"][1]])
-        print(prototype)
         if not json.loads(prototype["mutation"]["warp"]):
             self.tabwrite("nowarp def ")
         else:
