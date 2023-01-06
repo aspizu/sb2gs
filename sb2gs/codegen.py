@@ -1,5 +1,6 @@
+import json
 from pathlib import Path
-from typing import IO
+from typing import IO, cast
 
 from blockdefs import hats, reporters, statements
 from sb3 import Block, Costume, Input, MutatedBlock, Sprite
@@ -31,7 +32,7 @@ class CodeGen:
         self.tabwrite("listglobals " + ", ".join(listglobals) + ";\n")
         self.costumes(self.sprite["costumes"])
         for block in self.blocks.values():
-            if block["opcode"] in hats:
+            if block["opcode"] in hats or block["opcode"] in ("procedures_definition",):
                 self.block(block)
 
     def write(self, o: str) -> None:
@@ -73,6 +74,8 @@ class CodeGen:
     def block(self, o: Block | MutatedBlock) -> None:
         if o["opcode"] == "argument_reporter_string_number":
             self.argument(o)
+        elif o["opcode"] == "procedures_definition":
+            self.define(o)
         elif o["opcode"] == "control_if":
             self.control_if(o)
         elif o["opcode"] == "control_repeat_until":
@@ -147,7 +150,7 @@ class CodeGen:
         self.write(")")
 
     def argument(self, o: Block) -> None:
-        self.write(o["fields"]["VALUE"][0])
+        self.write("$" + o["fields"]["VALUE"][0])
 
     def blockinputs(self, o: Block) -> None:
         inputs = list(o["inputs"].values())
@@ -300,3 +303,14 @@ class CodeGen:
         self.input(o["inputs"]["ITEM"])
         self.write(";\n")
         self.next(o)
+
+    def define(self, o: Block) -> None:
+        prototype = cast(MutatedBlock, self.blocks[o["inputs"]["custom_block"][1]])
+        print(prototype)
+        self.tabwrite("def " + prototype["mutation"]["proccode"].split(" ")[0] + " ")
+        self.write(", ".join(json.loads(prototype["mutation"]["argumentnames"])))
+        self.write(" {\n")
+        self.indent += 1
+        self.next(o)
+        self.indent -= 1
+        self.tabwrite("}\n\n")
