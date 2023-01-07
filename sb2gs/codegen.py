@@ -6,6 +6,12 @@ from blockdefs import hats, reporters, statements
 from sb3 import Block, Costume, Input, MutatedBlock, Sprite
 
 
+def name(name: str) -> str:
+    return "".join(
+        i for i in "_".join(name.split(" ")).lower() if i.isalnum() or i in "_"
+    )
+
+
 def string(o: str) -> str:
     return '"' + repr(o)[1:-1] + '"'
 
@@ -28,8 +34,8 @@ class CodeGen:
         self.indent: int = 0
         self.sprite = sprite
         self.blocks = sprite["blocks"]
-        self.tabwrite("globals " + ", ".join(globals) + ";\n")
-        self.tabwrite("listglobals " + ", ".join(listglobals) + ";\n")
+        self.tabwrite("globals " + ", ".join(map(name, globals)) + ";\n")
+        self.tabwrite("listglobals " + ", ".join(map(name, listglobals)) + ";\n")
         self.costumes(self.sprite["costumes"])
         for block in self.blocks.values():
             if block["opcode"] in hats or block["opcode"] in (
@@ -62,17 +68,19 @@ class CodeGen:
 
     def input(self, o: Input) -> None:
         # BLOCK
+        if o[1] is None:
+            return
         if o[0] in (1, 2, 3) and isinstance(o[1], str):
             block: str = o[1]
             self.block(self.blocks[block])
         # STRING LITERAL
-        elif o[0] == 1 and o[1][0] in (4, 5, 6, 7, 10, 11):
+        elif o[0] == 1 and o[1][0] in (4, 5, 6, 7, 8, 10, 11):
             string: str = o[1][1]
             self.write(literal(string))
         # VARIABLE REPORTER
         elif o[0] == 3 and o[1][0] == 12:
             variable: str = o[1][1]
-            self.write(variable)
+            self.write(name(variable))
 
     def block(self, o: Block | MutatedBlock) -> None:
         if o["opcode"] == "argument_reporter_string_number":
@@ -83,6 +91,8 @@ class CodeGen:
             self.input([1, [4, o["fields"]["BACKDROP"][0]]])
         elif o["opcode"] == "sound_sounds_menu":
             self.input([1, [4, o["fields"]["SOUND_MENU"][0]]])
+        elif o["opcode"] == "sensing_keyoptions":
+            self.input([1, [4, o["fields"]["KEY_OPTION"][0]]])
         elif o["opcode"] == "procedures_definition":
             self.define(o)
         elif o["opcode"] == "procedures_call":
@@ -167,7 +177,7 @@ class CodeGen:
         self.write(")")
 
     def argument(self, o: Block) -> None:
-        self.write("$" + o["fields"]["VALUE"][0])
+        self.write("$" + name(o["fields"]["VALUE"][0]))
 
     def blockinputs(self, o: Block) -> None:
         inputs = list(o["inputs"].values())
@@ -259,61 +269,61 @@ class CodeGen:
         return opcodes[block["opcode"]]
 
     def data_setvariableto(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["VARIABLE"][0] + " = ")
+        self.tabwrite(name(o["fields"]["VARIABLE"][0]) + " = ")
         self.blockinputs(o)
         self.write(";\n")
         self.next(o)
 
     def data_changevariableby(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["VARIABLE"][0] + " += ")
+        self.tabwrite(name(o["fields"]["VARIABLE"][0]) + " += ")
         self.blockinputs(o)
         self.write(";\n")
         self.next(o)
 
     def data_deletealloflist(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["LIST"][0] + "[];\n")
+        self.tabwrite(name(o["fields"]["LIST"][0]) + "[];\n")
         self.next(o)
 
     def listshow(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["LIST"][0] + ".show;\n")
+        self.tabwrite(name(o["fields"]["LIST"][0]) + ".show;\n")
         self.next(o)
 
     def listhide(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["LIST"][0] + ".hide;\n")
+        self.tabwrite(name(o["fields"]["LIST"][0]) + ".hide;\n")
         self.next(o)
 
     def data_additemtolist(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["LIST"][0] + ".add ")
+        self.tabwrite(name(o["fields"]["LIST"][0]) + ".add ")
         self.blockinputs(o)
         self.write(";\n")
         self.next(o)
 
     def data_deleteitemoflist(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["LIST"][0] + ".delete ")
+        self.tabwrite(name(o["fields"]["LIST"][0]) + ".delete ")
         self.blockinputs(o)
         self.write(";\n")
         self.next(o)
 
     def itemoflist(self, o: Block) -> None:
-        self.write(o["fields"]["LIST"][0] + "[")
+        self.write(name(o["fields"]["LIST"][0]) + "[")
         self.blockinputs(o)
         self.write("]")
 
     def listindex(self, o: Block) -> None:
-        self.write(o["fields"]["LIST"][0] + ".index(")
+        self.write(name(o["fields"]["LIST"][0]) + ".index(")
         self.blockinputs(o)
         self.write(")")
 
     def listcontains(self, o: Block) -> None:
-        self.write(o["fields"]["LIST"][0] + ".contains(")
+        self.write(name(o["fields"]["LIST"][0]) + ".contains(")
         self.blockinputs(o)
         self.write(")")
 
     def listlength(self, o: Block) -> None:
-        self.write(o["fields"]["LIST"][0] + ".length")
+        self.write(name(o["fields"]["LIST"][0]) + ".length")
 
     def listinsert(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["LIST"][0] + ".insert ")
+        self.tabwrite(name(o["fields"]["LIST"][0]) + ".insert ")
         self.input(o["inputs"]["INDEX"])
         self.write(", ")
         self.input(o["inputs"]["ITEM"])
@@ -321,9 +331,9 @@ class CodeGen:
         self.next(o)
 
     def listreplace(self, o: Block) -> None:
-        self.tabwrite(o["fields"]["LIST"][0] + ".replace ")
+        self.tabwrite(name(o["fields"]["LIST"][0]) + "[")
         self.input(o["inputs"]["INDEX"])
-        self.write(", ")
+        self.write("] = ")
         self.input(o["inputs"]["ITEM"])
         self.write(";\n")
         self.next(o)
@@ -334,7 +344,7 @@ class CodeGen:
             self.tabwrite("nowarp def ")
         else:
             self.tabwrite("def ")
-        self.write(prototype["mutation"]["proccode"].split(" ")[0] + " ")
+        self.write(name(prototype["mutation"]["proccode"].split("%")[0]) + " ")
         self.write(", ".join(json.loads(prototype["mutation"]["argumentnames"])))
         self.write(" {\n")
         self.indent += 1
@@ -352,7 +362,7 @@ class CodeGen:
         self.write("}\n\n")
 
     def call(self, o: MutatedBlock) -> None:
-        self.tabwrite(o["mutation"]["proccode"].split(" ")[0])
+        self.tabwrite(name(o["mutation"]["proccode"].split("%")[0]))
         if o["inputs"]:
             self.write(" ")
         self.blockinputs(o)
