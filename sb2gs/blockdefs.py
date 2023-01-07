@@ -14,4 +14,3 @@ def gdsl_read(filename: str) -> dict[str, str]:
 
 statements: dict[str, str] = gdsl_read("statements.txt")
 reporters: dict[str, str] = gdsl_read("reporters.txt")
-hats: dict[str, str] = gdsl_read("hats.txt")

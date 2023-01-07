@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import IO, cast
 
-from blockdefs import hats, reporters, statements
+from blockdefs import reporters, statements
 from sb3 import Block, Costume, Input, MutatedBlock, Sprite
 
 
@@ -38,10 +38,7 @@ class CodeGen:
         self.tabwrite("listglobals " + ", ".join(map(name, listglobals)) + ";\n")
         self.costumes(self.sprite["costumes"])
         for block in self.blocks.values():
-            if block["opcode"] in hats or block["opcode"] in (
-                "procedures_definition",
-                "event_whenbroadcastreceived",
-            ):
+            if block["topLevel"]:
                 self.block(block)
 
     def write(self, o: str) -> None:
@@ -135,6 +132,28 @@ class CodeGen:
             self.listlength(o)
         elif o["opcode"] == "data_listcontainsitem":
             self.listcontains(o)
+        elif o["opcode"] == "event_whenflagclicked":
+            self.onflag(o)
+        elif o["opcode"] == "event_whenthisspriteclicked":
+            self.onclick(o)
+        elif o["opcode"] == "control_start_as_clone":
+            self.onclone(o)
+        elif o["opcode"] == "event_whenbroadcastreceived":
+            self.on(o)
+        elif o["opcode"] == "event_whenkeypressed":
+            self.onkey(o)
+        elif o["opcode"] == "event_whenbackdropswitchesto":
+            self.onbackdrop(o)
+        elif (
+            o["opcode"] == "event_whengreaterthan"
+            and o["fields"]["WHENGREATERTHANMENU"][0] == "LOUDNESS"
+        ):
+            self.onloudness(o)
+        elif (
+            o["opcode"] == "event_whengreaterthan"
+            and o["fields"]["WHENGREATERTHANMENU"][0] == "TIMER"
+        ):
+            self.ontimer(o)
         try:
             return self.statement(self.getopcode(statements, o), o)
         except KeyError:
@@ -143,16 +162,45 @@ class CodeGen:
             return self.reporter(self.getopcode(reporters, o), o)
         except KeyError:
             pass
-        try:
-            return self.hat(self.getopcode(hats, o), o)
-        except KeyError:
-            pass
 
-    def hat(self, opcode: str, o: Block) -> None:
-        self.tabwrite(opcode)
-        if o["inputs"]:
-            self.write(" ")
-        self.blockinputs(o)
+    def onflag(self, o: Block) -> None:
+        self.tabwrite("onflag")
+        self.stack(o)
+
+    def onclone(self, o: Block) -> None:
+        self.tabwrite("onclone")
+        self.stack(o)
+
+    def onclick(self, o: Block) -> None:
+        self.tabwrite("onclone")
+        self.stack(o)
+
+    def onkey(self, o: Block) -> None:
+        self.tabwrite("onkey ")
+        self.write(string(o["fields"]["KEY_OPTION"][0]))
+        self.stack(o)
+
+    def onbackdrop(self, o: Block) -> None:
+        self.tabwrite("onbackdrop ")
+        self.write(string(o["fields"]["BACKDROP_OPTION"][0]))
+        self.stack(o)
+
+    def onloudness(self, o: Block) -> None:
+        self.tabwrite("onloudness ")
+        self.input(o["inputs"]["VALUE"])
+        self.stack(o)
+
+    def ontimer(self, o: Block) -> None:
+        self.tabwrite("ontimer ")
+        self.input(o["inputs"]["VALUE"])
+        self.stack(o)
+
+    def on(self, o: Block) -> None:
+        self.tabwrite("on ")
+        self.write(string(o["fields"]["BROADCAST_OPTION"][0]))
+        self.stack(o)
+
+    def stack(self, o: Block) -> None:
         self.write(" {\n")
         self.indent += 1
         self.next(o)
