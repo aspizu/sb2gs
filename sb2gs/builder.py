@@ -11,7 +11,10 @@ class Builder:
     def __init__(self, input: Path, output: Path) -> None:
         self.input = input
         self.output = output
-        shutil.rmtree(output)
+        try:
+            shutil.rmtree(output)
+        except FileNotFoundError:
+            pass
         output.mkdir()
 
         with ZipFile(self.input, "r") as sb3:
