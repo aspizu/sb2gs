@@ -5,11 +5,23 @@ from typing import IO, cast
 from blockdefs import reporters, statements
 from sb3 import Block, Costume, Input, MutatedBlock, Sprite
 
+INFIX = {
+    "operator_add": "+",
+    "operator_subtract": "-",
+    "operator_multiply": "*",
+    "operator_divide": "/",
+    "operator_join": "&",
+}
+INFIX_PRECEDENCE = list(INFIX.values())
+
 
 def name(name: str) -> str:
-    return "".join(
-        i for i in "_".join(name.split(" ")).lower() if i.isalnum() or i in "_"
+    w = "".join(
+        i
+        for i in "".join(i.capitalize() for i in name.split(" ")).lower()
+        if i.isidentifier()
     )
+    return w[0].lower() + w[1:]
 
 
 def string(o: str) -> str:
@@ -34,8 +46,10 @@ class CodeGen:
         self.indent: int = 0
         self.sprite = sprite
         self.blocks = sprite["blocks"]
-        self.tabwrite("globals " + ", ".join(map(name, globals)) + ";\n")
-        self.tabwrite("listglobals " + ", ".join(map(name, listglobals)) + ";\n")
+        if globals:
+            self.tabwrite("globals " + ", ".join(map(name, globals)) + ";\n")
+        if listglobals:
+            self.tabwrite("listglobals " + ", ".join(map(name, listglobals)) + ";\n")
         self.costumes(self.sprite["costumes"])
         for block in self.blocks.values():
             if block["topLevel"]:
@@ -63,13 +77,18 @@ class CodeGen:
             f(last[0])
         self.write(";\n\n")
 
-    def input(self, o: Input) -> None:
+    def getblockfrominput(self, o: Input) -> Block | None:
+        if o[0] in (1, 2, 3) and isinstance(o[1], str):
+            block: str = o[1]
+            return self.blocks[block]
+
+    def input(self, o: Input, parens: bool = False) -> None:
         # BLOCK
         if o[1] is None:
             return
         if o[0] in (1, 2, 3) and isinstance(o[1], str):
             block: str = o[1]
-            self.block(self.blocks[block])
+            self.block(self.blocks[block], parens)
         # STRING LITERAL
         elif o[0] == 1 and o[1][0] in (4, 5, 6, 7, 8, 10, 11):
             string: str = o[1][1]
@@ -79,9 +98,32 @@ class CodeGen:
             variable: str = o[1][1]
             self.write(name(variable))
 
-    def block(self, o: Block | MutatedBlock) -> None:
+    def infix(self, o: Block, op: str, parens: bool) -> None:
+        def f(a: str) -> None:
+            block = self.getblockfrominput(o["inputs"][a])
+            if (
+                block
+                and block["opcode"] in INFIX
+                and INFIX_PRECEDENCE.index(op)
+                > INFIX_PRECEDENCE.index(INFIX[block["opcode"]])
+            ):
+                self.block(block, True)
+            else:
+                self.input(o["inputs"][a])
+
+        if parens:
+            self.write("(")
+        f("NUM1")
+        self.write(" " + op + " ")
+        f("NUM2")
+        if parens:
+            self.write(")")
+
+    def block(self, o: Block | MutatedBlock, parens: bool = False) -> None:
         if o["opcode"] == "argument_reporter_string_number":
             self.argument(o)
+        elif o["opcode"] in INFIX:
+            self.infix(o, INFIX[o["opcode"]], parens)
         elif o["opcode"] == "looks_costume":
             self.input([1, [4, o["fields"]["COSTUME"][0]]])
         elif o["opcode"] == "looks_backdrops":
@@ -154,14 +196,13 @@ class CodeGen:
             and o["fields"]["WHENGREATERTHANMENU"][0] == "TIMER"
         ):
             self.ontimer(o)
-        try:
-            return self.statement(self.getopcode(statements, o), o)
-        except KeyError:
-            pass
-        try:
-            return self.reporter(self.getopcode(reporters, o), o)
-        except KeyError:
-            pass
+        else:
+            opcode = self.getopcode(statements, o)
+            if opcode:
+                return self.statement(opcode, o)
+            opcode = self.getopcode(reporters, o)
+            if opcode:
+                return self.reporter(opcode, o)
 
     def onflag(self, o: Block) -> None:
         self.tabwrite("onflag")
@@ -294,7 +335,7 @@ class CodeGen:
         self.tabwrite("}\n")
         self.next(o)
 
-    def getopcode(self, opcodes: dict[str, str], block: Block) -> str:
+    def getopcode(self, opcodes: dict[str, str], block: Block) -> str | None:
         if block["inputs"]:
             for name, value in block["inputs"].items():
                 if value[0] == 1 and isinstance(value[1], str):
@@ -314,7 +355,7 @@ class CodeGen:
                     return opcodes[opcode]
                 except KeyError:
                     pass
-        return opcodes[block["opcode"]]
+        return opcodes.get(block["opcode"])
 
     def data_setvariableto(self, o: Block) -> None:
         self.tabwrite(name(o["fields"]["VARIABLE"][0]) + " = ")
