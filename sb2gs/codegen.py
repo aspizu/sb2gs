@@ -6,6 +6,11 @@ from blockdefs import reporters, statements
 from sb3 import Block, Costume, Input, MutatedBlock, Sprite
 
 INFIX = {
+    "operator_and": "and",
+    "operator_or": "or",
+    "operator_equals": "=",
+    "operator_gt": ">",
+    "operator_lt": "<",
     "operator_add": "+",
     "operator_subtract": "-",
     "operator_multiply": "*",
@@ -99,8 +104,9 @@ class CodeGen:
             self.write(name(variable))
 
     def infix(self, o: Block, op: str, parens: bool) -> None:
-        def f(a: str) -> None:
-            block = self.getblockfrominput(o["inputs"][a])
+        def f(a: int) -> None:
+            input = o["inputs"][list(o["inputs"].keys())[a]]
+            block = self.getblockfrominput(input)
             if (
                 block
                 and block["opcode"] in INFIX
@@ -109,13 +115,13 @@ class CodeGen:
             ):
                 self.block(block, True)
             else:
-                self.input(o["inputs"][a])
+                self.input(input)
 
         if parens:
             self.write("(")
-        f("NUM1")
+        f(0)
         self.write(" " + op + " ")
-        f("NUM2")
+        f(1)
         if parens:
             self.write(")")
 
