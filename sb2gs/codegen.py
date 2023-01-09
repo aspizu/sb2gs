@@ -26,7 +26,10 @@ def name(name: str) -> str:
         for i in "".join(i.capitalize() for i in name.split(" ")).lower()
         if i.isidentifier()
     )
-    return w[0].lower() + w[1:]
+    try:
+        return w[0].lower() + w[1:]
+    except:
+        return "idk"
 
 
 def string(o: str) -> str:
