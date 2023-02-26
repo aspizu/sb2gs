@@ -40,5 +40,5 @@ class Builder:
                 name = costume["name"] + Path(costume["md5ext"]).suffix
                 file = self.output / costume["md5ext"]
                 if file.is_file():
-                    file.rename(self.output / name)
+                    file.rename(self.output / str(name).replace("/", "_"))
             CodeGen(out, sprite, self.globals, self.listglobals)
