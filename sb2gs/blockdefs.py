@@ -1,9 +1,9 @@
-import importlib.resources
+from importlib.resources import files
 
 
 def gdsl_read(filename: str) -> dict[str, str]:
     statements: dict[str, str] = {}
-    for line in importlib.resources.open_text("res", filename):
+    for line in files("res").joinpath(filename).open('r'):
         line = line.strip()
         if not line or line[0] == "#":
             continue

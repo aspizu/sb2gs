@@ -1,13 +1,13 @@
-from typing import Any, TypedDict
+from typing import Any, TypedDict, Optional,Union
 
 Input = list[Any]
-Field = tuple[str, str | None]
+Field = tuple[str, Optional[str]]
 
 
 class Block(TypedDict):
     opcode: str
-    next: str | None
-    parent: str | None
+    next: Optional[str]
+    parent: Optional[str]
     inputs: dict[str, Input]
     fields: dict[str, Field]
     shadow: bool
@@ -34,7 +34,7 @@ class Sprite(TypedDict):
     variables: dict[str, tuple[str, Any]]
     lists: dict[str, tuple[str, Any]]
     costumes: list[Costume]
-    blocks: dict[str, Block | MutatedBlock]
+    blocks: dict[str, Union[Block, MutatedBlock]]
 
 
 class Project(TypedDict):

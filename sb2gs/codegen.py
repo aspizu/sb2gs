@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import IO, cast
+from typing import IO, cast, Optional, Union
 
 from blockdefs import reporters, statements
 from sb3 import Block, Costume, Input, MutatedBlock, Sprite
@@ -60,6 +60,8 @@ class CodeGen:
             self.tabwrite("listglobals " + ", ".join(map(name, listglobals)) + ";\n")
         self.costumes(self.sprite["costumes"])
         for block in self.blocks.values():
+            if type(block) == list:
+                continue
             if block["topLevel"]:
                 self.block(block)
 
@@ -85,7 +87,7 @@ class CodeGen:
             f(last[0])
         self.write(";\n\n")
 
-    def getblockfrominput(self, o: Input) -> Block | None:
+    def getblockfrominput(self, o: Input) -> Optional[Block]:
         if o[0] in (1, 2, 3) and isinstance(o[1], str):
             block: str = o[1]
             return self.blocks[block]
@@ -108,6 +110,8 @@ class CodeGen:
 
     def infix(self, o: Block, op: str, parens: bool) -> None:
         def f(a: int) -> None:
+            if a >= len(list(o["inputs"].keys())):
+                return
             input = o["inputs"][list(o["inputs"].keys())[a]]
             block = self.getblockfrominput(input)
             if (
@@ -128,7 +132,7 @@ class CodeGen:
         if parens:
             self.write(")")
 
-    def block(self, o: Block | MutatedBlock, parens: bool = False) -> None:
+    def block(self, o: Union[Block, MutatedBlock], parens: bool = False) -> None:
         if o["opcode"] == "argument_reporter_string_number":
             self.argument(o)
         elif o["opcode"] in INFIX:
@@ -344,10 +348,10 @@ class CodeGen:
         self.tabwrite("}\n")
         self.next(o)
 
-    def getopcode(self, opcodes: dict[str, str], block: Block) -> str | None:
+    def getopcode(self, opcodes: dict[str, str], block: Block) -> Optional[str]:
         if block["inputs"]:
             for name, value in block["inputs"].items():
-                if value[0] == 1 and isinstance(value[1], str):
+                if value[0] == 1 and isinstance(value[1], str) and name in self.blocks[value[1]]["fields"]:
                     opcode = (
                         block["opcode"]
                         + "!"

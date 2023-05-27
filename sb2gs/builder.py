@@ -2,7 +2,7 @@ import json
 import shutil
 from pathlib import Path
 from zipfile import ZipFile
-
+import re
 from codegen import CodeGen
 from sb3 import Project, Sprite
 
@@ -35,10 +35,13 @@ class Builder:
             sprite["name"] = "stage"
             self.globals: list[str] = [i[0] for i in sprite["variables"].values()]
             self.listglobals: list[str] = [i[0] for i in sprite["lists"].values()]
-        with open(self.output / (sprite["name"] + ".gs"), "w") as out:
+        with open(self.output / (sprite["name"] + ".gs"), "w", encoding='utf-8') as out:
             for costume in sprite["costumes"]:
-                name = costume["name"] + Path(costume["md5ext"]).suffix
+                sprite_name = sprite["name"]
+                costume_name = costume["name"] + Path(costume["md5ext"]).suffix
                 file = self.output / costume["md5ext"]
                 if file.is_file():
-                    file.rename(self.output / name)
+                    # uses re.sub to sanitize the filename and remove diallowed characters
+                    santised_name = re.sub(r'[^\w.-]', '_', sprite_name)+"_"+re.sub(r'[^\w.-]', '_', costume_name)
+                    file.rename(self.output / santised_name)
             CodeGen(out, sprite, self.globals, self.listglobals)
