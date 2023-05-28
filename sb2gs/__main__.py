@@ -22,8 +22,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="sb2gs", description="Convert a Scratch project into a GoboScript project"
     )
-    parser.add_argument("input", type=input_parse)
-    parser.add_argument("output", type=output_parse)
+    parser.add_argument("-input", type=input_parse)
+    parser.add_argument("-output", type=output_parse)
     args = parser.parse_args()
     input: Path = args.input
     output: Path = args.output
