@@ -1,33 +1,80 @@
+from __future__ import annotations
+
 import argparse
+import json
 from pathlib import Path
+from sys import stdout
+from zipfile import ZipFile
 
-from builder import Builder
+from rich import print
 
+from .decompiler import Blocks, get_name
+from .sb3 import Namespace, Project
 
-def main() -> None:
-    def input_parse(i: str) -> Path:
-        o = Path(i)
-        if not o.exists():
-            raise argparse.ArgumentTypeError(f"{o} does not exist")
-        if not o.is_file() or not o.name.endswith("sb3"):
-            raise argparse.ArgumentTypeError(f"{o} is not a Scratch project")
-        return o
-
-    def output_parse(i: str) -> Path:
-        o = Path(i)
-        if o.is_file():
-            raise argparse.ArgumentTypeError(f"{o} is a file")
-        return o
-
-    parser = argparse.ArgumentParser(
-        prog="sb2gs", description="Convert a Scratch project into a GoboScript project"
-    )
-    parser.add_argument("-input", type=input_parse)
-    parser.add_argument("-output", type=output_parse)
-    args = parser.parse_args()
-    input: Path = args.input
-    output: Path = args.output
-    Builder(input, output)
+EXT = "gobo"
 
 
-main()
+def parsearg_input(arg: str) -> Path:
+    path = Path(arg)
+    if not path.exists():
+        raise argparse.ArgumentTypeError(f"{arg} does not exist.")
+    if not path.is_file():
+        raise argparse.ArgumentTypeError(f"{arg} is not a file.")
+    if path.suffix != ".sb3":
+        raise argparse.ArgumentTypeError(f"{arg} is not a Scratch project file.")
+    return path
+
+
+def parsearg_output(arg: str) -> Path:
+    path = Path(arg)
+    if path.is_file():
+        raise argparse.ArgumentTypeError(f"{arg} is a file.")
+
+    if path.is_dir() and not (path / "stage.gobo").is_file() and any(path.iterdir()):
+        raise argparse.ArgumentTypeError(f"{arg} exists and is not empty.")
+    return path
+
+
+argparser = argparse.ArgumentParser(
+    prog="sb2gs",
+    description="The goboscript decompiler.",
+    epilog="homepage: https://github.com/aspizu/sb2gs",
+)
+
+argparser.add_argument(
+    "-input", type=parsearg_input, help="Scratch project file.", required=True
+)
+argparser.add_argument(
+    "-output", type=parsearg_output, help="Output directory.", required=True
+)
+
+args = argparser.parse_args()
+input: Path = args.input
+output: Path = args.output
+output.mkdir(exist_ok=True)
+
+zf = ZipFile(input)
+project: Project = json.load(zf.open("project.json"), object_hook=Namespace)
+if project.meta.semver != "3.0.0":
+    msg = f"Unsupported Scratch version {project.meta.semver}"
+    raise RuntimeError(msg)
+
+
+for target in project.targets:
+    if "/" in target.name:
+        msg = f"Sprite \"{target.name}\" name contains '/', rename required."
+        raise RuntimeError(msg)
+    if target.name == "stage":
+        msg = 'Sprite is named "stage", rename required.'
+        raise RuntimeError(msg)
+    if target.name == "Stage":
+        target.name = "stage"
+    (output / target.name).mkdir(exist_ok=True)
+    for costume in target.costumes:
+        zf.extract(costume.md5ext, output / target.name)
+        (output / target.name / costume.md5ext).rename(
+            output / target.name / f"{costume.name}.{costume.dataFormat}"
+        )
+    with (output / f"{target.name}.{EXT}").open("w") as file:
+        blocks = Blocks(target, file)
+        blocks.all()

@@ -129,4 +129,5 @@ dmypy.json
 .pyre/
 
 *.sb3
+test/
 *.out/
