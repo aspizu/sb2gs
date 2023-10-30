@@ -1,22 +1,30 @@
 from __future__ import annotations
-
-import contextlib
 import json
 import string
-from dataclasses import dataclass
+import contextlib
 from typing import TYPE_CHECKING, Any, TextIO
-
-from rich import print
-
-from .header import REPORTERS, STATEMENTS, Prototype
+from dataclasses import dataclass
 from .sb3 import Input, Target
+from .header import REPORTERS, STATEMENTS, Prototype
+
+try:
+    from rich import print
+except ImportError:
+    from builtins import print
 
 if TYPE_CHECKING:
-    from .sb3 import Block, Namespace
+    from .sb3 import Block
 
 
 def get_name(name: str):
+    if name.strip() in ("//", "#"):
+        return "REM"
     name = "_".join(name.split())
+    name = name.replace("!", "_BNG_")
+    name = name.replace(".", "_DOT_")
+    name = name.replace("$", "_PHP_")
+    if name[0] in string.digits:
+        name = "z" + name
     return "".join(i for i in name if i in string.ascii_letters + string.digits + "_")
 
 
@@ -79,17 +87,38 @@ class Blocks:
         self.file.write(tab + string)
 
     def all(self):
+        self.tabwrite("variables ")
+        for i, variable in enumerate(self.target.variables._.items()):
+            self.write(get_name(variable[1][0]))
+            if i < len(self.target.variables) - 1:
+                self.write(", ")
+        self.write(";\n")
+
+        self.tabwrite("lists ")
+        for i, lst in enumerate(self.target.lists._.items()):
+            self.write(get_name(lst[1][0]))
+            if i < len(self.target.lists) - 1:
+                self.write(", ")
+        self.write(";\n")
+
         self.tabwrite("costumes ")
         for i, costume in enumerate(self.target.costumes):
             self.value(f"{self.target.name}/{costume.name}.{costume.dataFormat}")
             if i < len(self.target.costumes) - 1:
                 self.write(", ")
-            self.write(";\n\n")
+        self.write(";\n\n")
         for block in self.blocks._.values():
-            if block.opcode.startswith("event_") or block.opcode in [
-                "control_start_as_clone",
-                "procedures_definition",
-            ]:
+            if isinstance(block, list):
+                continue
+            if (
+                block.opcode.startswith("event_")
+                and block.opcode not in ["event_broadcast", "event_broadcastandwait"]
+                or block.opcode
+                in [
+                    "control_start_as_clone",
+                    "procedures_definition",
+                ]
+            ):
                 self.block(block)
                 self.write("\n")
 
@@ -123,15 +152,20 @@ class Blocks:
             value = int(value)
         except ValueError:
             with contextlib.suppress(ValueError):
+                if value in ("Infinity", "-Infinity"):
+                    raise ValueError from None
                 value = float(value)
 
         match value:
             case int() | float():
                 self.write(str(value))
             case str():
-                value = value.replace("\\", "\\\\").replace('"', '\\"')
-                value = '"' + value + '"'
-                self.write(value)
+                self.str(value)
+
+    def str(self, value: str):
+        value = value.replace("\\", "\\\\").replace('"', '\\"')
+        value = '"' + value + '"'
+        self.write(value)
 
     def input(self, block: Block, key: str, default: str | None = None):
         input = block.inputs._.get(key)
@@ -152,7 +186,7 @@ class Blocks:
         if name := Input.list(input):
             self.list(name)
             return
-        print(block)
+        print(f'input "{key}":', block)
 
     def block(self, block: Block):
         if block.opcode in self.OPERATORS:
@@ -165,7 +199,7 @@ class Blocks:
         if func := getattr(self, block.opcode, None):
             func(block)
             return
-        print(block)
+        print("block:", block)
 
     def motion_pointindirection(self, block: Block):
         self.input(block, next(iter(block.inputs._.keys())))
@@ -177,6 +211,10 @@ class Blocks:
     control_create_clone_of_menu = sensing_touchingobjectmenu
     motion_glideto_menu = sensing_touchingobjectmenu
     control_wait = motion_pointindirection
+    looks_costume = sensing_touchingobjectmenu
+    looks_backdrops = sensing_touchingobjectmenu
+    sensing_distancetomenu = sensing_touchingobjectmenu
+    sound_sounds_menu = sensing_touchingobjectmenu
 
     def statement(self, block: Block):
         prototype = self.from_header_find_prototype(STATEMENTS, block)
@@ -282,7 +320,10 @@ class Blocks:
             parenthesis = False
             if id := Input.block(block.inputs._.get(operator.left)):
                 left = self.blocks[id]
-                if self.OPERATORS[left.opcode].precedence < operator.precedence:
+                if (
+                    left.opcode in self.OPERATORS
+                    and self.OPERATORS[left.opcode].precedence < operator.precedence
+                ):
                     parenthesis = True
 
             if parenthesis:
@@ -295,7 +336,10 @@ class Blocks:
             parenthesis = False
             if id := Input.block(block.inputs._.get(operator.right)):
                 right = self.blocks[id]
-                if self.OPERATORS[right.opcode].precedence <= operator.precedence:
+                if (
+                    right.opcode in self.OPERATORS
+                    and self.OPERATORS[right.opcode].precedence <= operator.precedence
+                ):
                     parenthesis = True
             if parenthesis:
                 self.write("(")
@@ -320,7 +364,7 @@ class Blocks:
             return
 
         if operator.opcode == "operator_not":
-            if id := Input.block(block.inputs[operator.left]):
+            if id := Input.block(block.inputs._.get(operator.left)):
                 leftb = self.blocks[id]
                 if leftb.opcode == "operator_equals":
                     leftb.opcode = "operator_notequals"
@@ -348,10 +392,15 @@ class Blocks:
     def list(self, name: str):
         self.write(get_name(name) + ".join")
 
-    def field(self, block: Block, key: str, *, isname: bool = False):
+    def field(
+        self, block: Block, key: str, *, isname: bool = False, isstr: bool = False
+    ):
         field = block.fields[key]
         if isname:
             self.write(get_name(field[0]))
+            return
+        if isstr:
+            self.str(field[0])
             return
         self.value(field[0])
 
@@ -363,7 +412,7 @@ class Blocks:
 
     def event_whenkeypressed(self, block: Block):
         self.tabwrite("onkey ")
-        self.field(block, "KEY_OPTION")
+        self.field(block, "KEY_OPTION", isstr=True)
         self.write(" ")
         self.stack(block.next)
 
@@ -447,6 +496,10 @@ class Blocks:
         self.input(block, "INDEX")
         self.write(";\n")
 
+    def data_lengthoflist(self, block: Block):
+        self.field(block, "LIST", isname=True)
+        self.write(".length")
+
     def data_deletealloflist(self, block: Block):
         self.tabwrite("")
         self.field(block, "LIST", isname=True)
@@ -455,7 +508,7 @@ class Blocks:
     def data_insertatlist(self, block: Block):
         self.tabwrite("")
         self.field(block, "LIST", isname=True)
-        self.write(" ")
+        self.write(".insert ")
         self.input(block, "INDEX")
         self.write(", ")
         self.input(block, "ITEM")
@@ -482,6 +535,12 @@ class Blocks:
         self.input(block, "ITEM")
         self.write(")")
 
+    def data_itemnumoflist(self, block: Block):
+        self.field(block, "LIST", isname=True)
+        self.write(".index(")
+        self.input(block, "ITEM")
+        self.write(")")
+
     def data_showlist(self, block: Block):
         self.tabwrite("")
         self.field(block, "LIST", isname=True)
@@ -500,7 +559,7 @@ class Blocks:
         else:
             self.tabwrite("def ")
         self.write(get_name(name))
-        args = json.loads(custom.mutation.argumentnames)
+        args = [get_name(i) for i in json.loads(custom.mutation.argumentnames)]
         self.write(" " + ", ".join(args))
         if args:
             self.write(" ")
@@ -518,3 +577,10 @@ class Blocks:
     def argument_reporter_string_number(self, block: Block):
         self.write("$")
         self.field(block, "VALUE", isname=True)
+
+    def argument_reporter_boolean(self, block: Block):
+        if block.fields["VALUE"][0] == "is compiled?":
+            self.write("true")
+            return
+        self.write("false")
+        print("boolean reporter:", block)

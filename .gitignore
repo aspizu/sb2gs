@@ -131,3 +131,4 @@ dmypy.json
 *.sb3
 test/
 *.out/
+tests/
