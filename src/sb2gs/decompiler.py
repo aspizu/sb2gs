@@ -1,16 +1,14 @@
 from __future__ import annotations
+
+import contextlib
 import json
 import string
-import contextlib
-from typing import TYPE_CHECKING, Any, TextIO
 from dataclasses import dataclass
-from .sb3 import Input, Target
-from .header import REPORTERS, STATEMENTS, Prototype
+from typing import TYPE_CHECKING, Any, TextIO
 
-try:
-    from rich import print
-except ImportError:
-    from builtins import print
+from . import nblk
+from .print import print
+from .sb3 import Input, Target
 
 if TYPE_CHECKING:
     from .sb3 import Block
@@ -47,7 +45,7 @@ class Blocks:
     "operator_not"       :( "not" , 0          , "OPERAND"  , ""         ),
     "operator_contains"  :( "in"  , 0          , "STRING2"  , "STRING1"  ),
     "operator_notequals" :( "!="  , 0          , "OPERAND1" , "OPERAND2" ),
-    "operator_equals"    :( "="   , 0          , "OPERAND1" , "OPERAND2" ),
+    "operator_equals"    :( "=="  , 0          , "OPERAND1" , "OPERAND2" ),
     "operator_lt"        :( "<"   , 0          , "OPERAND1" , "OPERAND2" ),
     "operator_gt"        :( ">"   , 0          , "OPERAND1" , "OPERAND2" ),
     "operator_le"        :( "<="  , 0          , "OPERAND1" , "OPERAND2" ),
@@ -87,19 +85,17 @@ class Blocks:
         self.file.write(tab + string)
 
     def all(self):
-        self.tabwrite("variables ")
-        for i, variable in enumerate(self.target.variables._.items()):
-            self.write(get_name(variable[1][0]))
-            if i < len(self.target.variables) - 1:
-                self.write(", ")
-        self.write(";\n")
+        # self.tabwrite("variables ")
+        # for i, variable in enumerate(self.target.variables._.items()):
+        #     self.write(get_name(variable[1][0]))
+        #     if i < len(self.target.variables) - 1:
+        #         self.write(", ")
+        # self.write(";\n")
 
-        self.tabwrite("lists ")
         for i, lst in enumerate(self.target.lists._.items()):
+            self.tabwrite("list ")
             self.write(get_name(lst[1][0]))
-            if i < len(self.target.lists) - 1:
-                self.write(", ")
-        self.write(";\n")
+            self.write(";\n")
 
         self.tabwrite("costumes ")
         for i, costume in enumerate(self.target.costumes):
@@ -113,33 +109,10 @@ class Blocks:
             if (
                 block.opcode.startswith("event_")
                 and block.opcode not in ["event_broadcast", "event_broadcastandwait"]
-                or block.opcode
-                in [
-                    "control_start_as_clone",
-                    "procedures_definition",
-                ]
+                or block.opcode in ["control_start_as_clone", "procedures_definition"]
             ):
                 self.block(block)
                 self.write("\n")
-
-    def from_header_find_prototype(
-        self, header: dict[str, list[Prototype]], block: Block
-    ):
-        for prototype in header[block.opcode]:
-            if (
-                prototype.defaultinput
-                and self.menu(block.inputs[prototype.defaultinput[0]])
-                != prototype.defaultinput[1]
-            ):
-                continue
-            if (
-                prototype.defaultfield
-                and block.fields[prototype.defaultfield[0]][0]
-                != prototype.defaultfield[1]
-            ):
-                continue
-            return prototype
-        return None
 
     def menu(self, input: list[Any]):
         if input[0] == 1 and isinstance(input[1], str):
@@ -168,6 +141,8 @@ class Blocks:
         self.write(value)
 
     def input(self, block: Block, key: str, default: str | None = None):
+        if key == "CONDITION" or key == "CONDITION2":
+            default = "false"
         input = block.inputs._.get(key)
         if input is None:
             if default:
@@ -189,6 +164,9 @@ class Blocks:
         print(f'input "{key}":', block)
 
     def block(self, block: Block):
+        if func := getattr(self, block.opcode, None):
+            func(block)
+            return
         if block.opcode in self.OPERATORS:
             self.binary_operator(block)
             return
@@ -196,13 +174,7 @@ class Blocks:
             return
         if self.reporter(block):
             return
-        if func := getattr(self, block.opcode, None):
-            func(block)
-            return
         print("block:", block)
-
-    def motion_pointindirection(self, block: Block):
-        self.input(block, next(iter(block.inputs._.keys())))
 
     def sensing_touchingobjectmenu(self, block: Block):
         self.value(next(iter(block.fields._.values()))[0])
@@ -210,32 +182,34 @@ class Blocks:
     sensing_keyoptions = sensing_touchingobjectmenu
     control_create_clone_of_menu = sensing_touchingobjectmenu
     motion_glideto_menu = sensing_touchingobjectmenu
-    control_wait = motion_pointindirection
+    # control_wait = motion_pointindirection
     looks_costume = sensing_touchingobjectmenu
     looks_backdrops = sensing_touchingobjectmenu
     sensing_distancetomenu = sensing_touchingobjectmenu
     sound_sounds_menu = sensing_touchingobjectmenu
+    motion_goto_menu = sensing_touchingobjectmenu
+    motion_pointtowards_menu = sensing_touchingobjectmenu
 
     def statement(self, block: Block):
-        prototype = self.from_header_find_prototype(STATEMENTS, block)
-        if prototype is None:
+        prototype = nblk.nblk(self, block)
+        if not prototype:
             return False
-        self.tabwrite(prototype.name + (" " if prototype.inputs else ""))
-        for index, key in enumerate(prototype.inputs):
+        self.tabwrite(prototype.name + (" " if prototype.args else ""))
+        for index, key in enumerate(prototype.args):
             self.input(block, key)
-            if index < len(prototype.inputs) - 1:
+            if index < len(prototype.args) - 1:
                 self.write(", ")
         self.write(";\n")
         return True
 
     def reporter(self, block: Block):
-        prototype = self.from_header_find_prototype(REPORTERS, block)
-        if prototype is None:
+        prototype = nblk.nblkreporter(self, block)
+        if not prototype:
             return False
         self.write(prototype.name + "(")
-        for index, key in enumerate(prototype.inputs):
+        for index, key in enumerate(prototype.args):
             self.input(block, key)
-            if index < len(prototype.inputs) - 1:
+            if index < len(prototype.args) - 1:
                 self.write(", ")
         self.write(")")
         return True
@@ -349,12 +323,13 @@ class Blocks:
 
         if (leftval := Input.value(block.inputs._.get(operator.left))) is not None:
             with contextlib.suppress(ValueError):
-                leftval = int(leftval)
-                if block.opcode == "operator_subtract":
-                    self.write("-")
-                    operator = self.OPERATORS["negative"]
-                    right()
-                    return
+                leftval = float(leftval)
+
+            if block.opcode == "operator_subtract" and (leftval == 0 or leftval == ""):
+                self.write("-")
+                operator = self.OPERATORS["negative"]
+                right()
+                return
 
         if operator.opcode == "operator_letter_of":
             right()
@@ -473,46 +448,47 @@ class Blocks:
         self.write(";\n")
 
     def data_showvariable(self, block: Block):
-        self.tabwrite("")
+        self.tabwrite("show ")
         self.field(block, "VARIABLE", isname=True)
-        self.write(".show;\n")
+        self.write(";\n")
 
     def data_hidevariable(self, block: Block):
-        self.tabwrite("")
+        self.tabwrite("hide ")
         self.field(block, "VARIABLE", isname=True)
-        self.write(".hide;\n")
+        self.write(";\n")
 
     def data_addtolist(self, block: Block):
-        self.tabwrite("")
-        self.field(block, "LIST", isname=True)
-        self.write(".add ")
+        self.tabwrite("add")
         self.input(block, "ITEM")
+        self.write(" to ")
+        self.field(block, "LIST", isname=True)
         self.write(";\n")
 
     def data_deleteoflist(self, block: Block):
-        self.tabwrite("")
+        self.tabwrite("delete ")
         self.field(block, "LIST", isname=True)
-        self.write(".delete ")
+        self.write("[")
         self.input(block, "INDEX")
-        self.write(";\n")
+        self.write("];\n")
 
     def data_lengthoflist(self, block: Block):
+        self.write("length(")
         self.field(block, "LIST", isname=True)
-        self.write(".length")
+        self.write(")")
 
     def data_deletealloflist(self, block: Block):
-        self.tabwrite("")
+        self.tabwrite("delete ")
         self.field(block, "LIST", isname=True)
-        self.write(" = [];\n")
+        self.write(";\n")
 
     def data_insertatlist(self, block: Block):
-        self.tabwrite("")
-        self.field(block, "LIST", isname=True)
-        self.write(".insert ")
-        self.input(block, "INDEX")
-        self.write(", ")
+        self.tabwrite("insert ")
         self.input(block, "ITEM")
-        self.write(";\n")
+        self.write(" at ")
+        self.field(block, "LIST", isname=True)
+        self.write("[")
+        self.input(block, "INDEX")
+        self.write("];\n")
 
     def data_replaceitemoflist(self, block: Block):
         self.tabwrite("")
@@ -530,34 +506,41 @@ class Blocks:
         self.write("]")
 
     def data_listcontainsitem(self, block: Block):
-        self.field(block, "LIST", isname=True)
-        self.write(".contains(")
+        # TODO: remove parenthesis
+        self.write("(")
+        self.write("(")
         self.input(block, "ITEM")
+        self.write(")")
+        self.write(" in ")
+        self.field(block, "LIST", isname=True)
         self.write(")")
 
     def data_itemnumoflist(self, block: Block):
-        self.field(block, "LIST", isname=True)
-        self.write(".index(")
+        self.write("(")
+        self.write("(")
         self.input(block, "ITEM")
+        self.write(")")
+        self.write(" in ")
+        self.field(block, "LIST", isname=True)
         self.write(")")
 
     def data_showlist(self, block: Block):
-        self.tabwrite("")
+        self.tabwrite("show ")
         self.field(block, "LIST", isname=True)
-        self.write(".show;\n")
+        self.write(";\n")
 
     def data_hidelist(self, block: Block):
-        self.tabwrite("")
+        self.tabwrite("hide ")
         self.field(block, "LIST", isname=True)
-        self.write(".hide;\n")
+        self.write(";\n")
 
     def procedures_definition(self, block: Block):
         custom = self.blocks[block.inputs["custom_block"][1]]
         name = custom.mutation.proccode.split("%s")[0]
         if custom.mutation.warp != "true":
-            self.tabwrite("nowarp def ")
+            self.tabwrite("nowarp proc ")
         else:
-            self.tabwrite("def ")
+            self.tabwrite("proc ")
         self.write(get_name(name))
         args = [get_name(i) for i in json.loads(custom.mutation.argumentnames)]
         self.write(" " + ", ".join(args))

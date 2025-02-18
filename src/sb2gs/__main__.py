@@ -1,12 +1,15 @@
 from __future__ import annotations
-import json
+
 import argparse
+import json
+import shutil
 from pathlib import Path
 from zipfile import ZipFile
-from .sb3 import Project, Namespace
-from .decompiler import Blocks
 
-EXT = "gobo"
+from .decompiler import Blocks
+from .sb3 import Namespace, Project
+
+EXT = "gs"
 
 
 def parsearg_input(arg: str) -> Path:
@@ -25,7 +28,7 @@ def parsearg_output(arg: str) -> Path:
     if path.is_file():
         raise argparse.ArgumentTypeError(f"{arg} is a file.")
 
-    if path.is_dir() and not (path / "stage.gobo").is_file() and any(path.iterdir()):
+    if path.is_dir() and not (path / f"stage.{EXT}").is_file() and any(path.iterdir()):
         raise argparse.ArgumentTypeError(f"{arg} exists and is not empty.")
     return path
 
@@ -37,15 +40,21 @@ argparser = argparse.ArgumentParser(
 )
 
 argparser.add_argument(
-    "-input", type=parsearg_input, help="Scratch project file.", required=True
+    "-i", "--input", type=parsearg_input, help="Scratch project file.", required=True
 )
 argparser.add_argument(
-    "-output", type=parsearg_output, help="Output directory.", required=True
+    "-o", "--output", type=parsearg_output, help="Output directory.", required=True
+)
+argparser.add_argument(
+    "-f", "--force", action="store_true", help="Overwrite existing files."
 )
 
 args = argparser.parse_args()
 input: Path = args.input
 output: Path = args.output
+force = args.force
+if force:
+    shutil.rmtree(output, ignore_errors=True)
 output.mkdir(exist_ok=True)
 
 zf = ZipFile(input)
