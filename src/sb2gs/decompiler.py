@@ -553,10 +553,14 @@ class Blocks:
 
     def procedures_call(self, block: Block):
         name = pcode.split(block.mutation.proccode)[0]
+        args = json.loads(block.mutation.argumentids)
         self.tabwrite(get_name(name) + (" " if block.inputs else ""))
-        for index, key in enumerate(block.inputs):
-            self.input(block, key)
-            if index < len(block.inputs) - 1:
+        for index, arg_id in enumerate(args):
+            if arg_id not in block.inputs:
+                self.write("false")
+            else:
+                self.input(block, arg_id)
+            if index < len(args) - 1:
                 self.write(", ")
         self.write(";\n")
 
