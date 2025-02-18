@@ -74,9 +74,14 @@ for target in project.targets:
     for costume in target.costumes:
         costume.name = costume.name.replace("/", "{{fwslash}}")
         zf.extract(costume.md5ext, output / target.name)
-        (output / target.name / costume.md5ext).rename(
+        costumefile = output / target.name / costume.md5ext
+        prettycostumepath = (
             output / target.name / f"{costume.name}.{costume.dataFormat}"
         )
+        if prettycostumepath.exists():
+            costumefile.unlink()
+        else:
+            costumefile.rename(prettycostumepath)
     with (output / f"{target.name}.{EXT}").open("w") as file:
         blocks = Blocks(target, file)
         blocks.all()
