@@ -42,16 +42,14 @@ argparser = argparse.ArgumentParser(
 argparser.add_argument(
     "-i", "--input", type=parsearg_input, help="Scratch project file.", required=True
 )
-argparser.add_argument(
-    "-o", "--output", type=parsearg_output, help="Output directory.", required=True
-)
+argparser.add_argument("-o", "--output", type=parsearg_output, help="Output directory.")
 argparser.add_argument(
     "-f", "--force", action="store_true", help="Overwrite existing files."
 )
 
 args = argparser.parse_args()
 input: Path = args.input
-output: Path = args.output
+output: Path = args.output or args.input.parent.joinpath(args.input.stem)
 force = args.force
 if force:
     shutil.rmtree(output, ignore_errors=True)
