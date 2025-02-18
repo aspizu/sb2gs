@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import re
 import string
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TextIO
@@ -12,6 +13,8 @@ from .sb3 import Input, Target
 
 if TYPE_CHECKING:
     from .sb3 import Block
+
+pcode = re.compile(r"%[bs]")
 
 
 def get_name(name: str):
@@ -536,7 +539,7 @@ class Blocks:
 
     def procedures_definition(self, block: Block):
         custom = self.blocks[block.inputs["custom_block"][1]]
-        name = custom.mutation.proccode.split("%s")[0]
+        name = pcode.split(custom.mutation.proccode)[0]
         if custom.mutation.warp != "true":
             self.tabwrite("nowarp proc ")
         else:
@@ -549,7 +552,7 @@ class Blocks:
         self.stack(block.next)
 
     def procedures_call(self, block: Block):
-        name = block.mutation.proccode.split("%s")[0]
+        name = pcode.split(block.mutation.proccode)[0]
         self.tabwrite(get_name(name) + (" " if block.inputs else ""))
         for index, key in enumerate(block.inputs):
             self.input(block, key)
@@ -562,8 +565,10 @@ class Blocks:
         self.field(block, "VALUE", isname=True)
 
     def argument_reporter_boolean(self, block: Block):
-        if block.fields["VALUE"][0] == "is compiled?":
-            self.write("true")
-            return
-        self.write("false")
-        print("boolean reporter:", block)
+        # TODO: Implement this properly
+        # if block.fields["VALUE"][0] == "is compiled?":
+        #    self.write("true")
+        #    return
+        # self.write("false")
+        self.write("$")
+        self.field(block, "VALUE", isname=True)
