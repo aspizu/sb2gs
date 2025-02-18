@@ -53,7 +53,13 @@ nblocks = {
     "looks_cleargraphiceffects": Prototype("clear_graphic_effects", []),
     "looks_show": Prototype("show", []),
     "looks_hide": Prototype("hide", []),
-    # TODO: Implement sound blocks
+    # Sounds
+    "sound_stopallsounds": Prototype("stop_all_sounds", []),
+    "sound_changevolumeby": Prototype("change_volume", ["VOLUME"]),
+    "sound_setvolumeto": Prototype("set_volume", ["VOLUME"]),
+    "sound_play": Prototype("start_sound", ["SOUND_MENU"]),
+    "sound_playuntildone": Prototype("play_sound_until_done", ["SOUND_MENU"]),
+    "sound_cleareffects": Prototype("clear_sound_effects", []),
     # Event
     "event_broadcast": Prototype("broadcast", ["BROADCAST_INPUT"]),
     "event_broadcastandwait": Prototype("broadcast_and_wait", ["BROADCAST_INPUT"]),
@@ -142,7 +148,11 @@ def nblk(blocks: Blocks, block: Block) -> Prototype | None:
                 return Prototype("go_forward", ["NUM"])
             case "backward":
                 return Prototype("go_backward", ["NUM"])
-    # TODO: Implement sound blocks
+    # Sounds
+    if block.opcode == "sound_seteffectto":
+        return Prototype(f"set_{block.fields.EFFECT[0].lower()}_effect", ["VALUE"])
+    if block.opcode == "sound_changeeffectby":
+        return Prototype(f"change_{block.fields.EFFECT[0].lower()}_effect", ["VALUE"])
     # Control
     if block.opcode == "control_stop":
         match block.fields.STOP_OPTION[0]:
