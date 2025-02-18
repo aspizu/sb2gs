@@ -94,6 +94,13 @@ class Blocks:
         #     if i < len(self.target.variables) - 1:
         #         self.write(", ")
         # self.write(";\n")
+        self.tabwrite("proc __variables__ {\n")
+        self.level += 1
+        for i, variable in enumerate(self.target.variables._.items()):
+            self.tabwrite(get_name(variable[1][0]))
+            self.write(" = 0;\n")
+        self.level -= 1
+        self.tabwrite("}\n")
 
         for i, lst in enumerate(self.target.lists._.items()):
             self.tabwrite("list ")
