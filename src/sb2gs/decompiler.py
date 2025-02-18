@@ -458,7 +458,7 @@ class Blocks:
         self.write(";\n")
 
     def data_addtolist(self, block: Block):
-        self.tabwrite("add")
+        self.tabwrite("add ")
         self.input(block, "ITEM")
         self.write(" to ")
         self.field(block, "LIST", isname=True)
