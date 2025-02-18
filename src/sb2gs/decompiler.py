@@ -576,3 +576,6 @@ class Blocks:
         # self.write("false")
         self.write("$")
         self.field(block, "VALUE", isname=True)
+
+    def sensing_of(self, block: Block):
+        self.write('"THING OF THING BLOCK NOT IMPLEMENTED"')
