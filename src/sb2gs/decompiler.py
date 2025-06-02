@@ -5,7 +5,7 @@ import json
 import re
 import string
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, TextIO
+from typing import TYPE_CHECKING, Any, TextIO, final
 
 from . import nblk
 from .print import print
@@ -38,6 +38,7 @@ class BinaryOperator:
     right: str
 
 
+@final
 class Blocks:
     # fmt: off
     OPERATORS = { k: BinaryOperator(k, *v) for k, v in {
@@ -64,8 +65,7 @@ class Blocks:
     }.items()}#-----------------------------------------------------------#
     COMPOUND_OPERATORS = {
     # OPCODE           : SYM #
-    #------------------:-----#
-    "operator_add"     : "+" ,
+    #------------------:-----#    "operator_add"     : "+" ,
     "operator_subtract": "-" ,
     "operator_multiply": "*" ,
     "operator_divide"  : "/" ,
@@ -88,19 +88,29 @@ class Blocks:
         self.file.write(tab + string)
 
     def all(self):
-        # self.tabwrite("variables ")
-        # for i, variable in enumerate(self.target.variables._.items()):
-        #     self.write(get_name(variable[1][0]))
-        #     if i < len(self.target.variables) - 1:
-        #         self.write(", ")
-        # self.write(";\n")
-        self.tabwrite("proc __variables__ {\n")
-        self.level += 1
-        for i, variable in enumerate(self.target.variables._.items()):
-            self.tabwrite(get_name(variable[1][0]))
-            self.write(" = 0;\n")
-        self.level -= 1
-        self.tabwrite("}\n")
+        # Generate var declarations with default values from the project
+        for variable_id, variable_data in self.target.variables._.items():
+            variable_name = variable_data[0]  # Variable name
+            default_value = variable_data[1]  # Default value from project
+            self.tabwrite("var ")
+            self.write(get_name(variable_name))
+            self.write(" = ")
+            self.value(default_value)
+            self.write(";\n")
+
+        if len(self.target.variables) > 0:
+            self.write("\n")
+
+        for i, lst in enumerate(self.target.lists._.items()):
+            self.tabwrite("list ")
+            self.write(get_name(lst[1][0]))
+            self.write(";\n")
+
+        for block in self.blocks._.values():
+            if isinstance(block, list):
+                continue
+            if block.opcode == "procedures_definition" and block.topLevel:
+                self.statement(block)
 
         for i, lst in enumerate(self.target.lists._.items()):
             self.tabwrite("list ")
