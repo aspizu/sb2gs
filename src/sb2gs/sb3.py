@@ -1,3 +1,5 @@
+# pyright: reportUninitializedInstanceVariable=false
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -67,8 +69,7 @@ class Mutation(Namespace[Any]):
     warp: str
 
 
-class Comment(Namespace[Any]):
-    ...
+class Comment(Namespace[Any]): ...
 
 
 class Costume(Namespace[Any]):
@@ -81,8 +82,7 @@ class Costume(Namespace[Any]):
     rotationCenterY: float
 
 
-class Sound(Namespace[Any]):
-    ...
+class Sound(Namespace[Any]): ...
 
 
 class Target(Namespace[Any]):

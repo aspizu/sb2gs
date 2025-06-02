@@ -13,12 +13,15 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = [
-    "rich>=13.9.4",
-]
+dev-dependencies = ["rich>=13.9.4"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sb2gs"]
+
+[tool.pyright]
+reportUnusedCallResult = false
+reportImportCycles = false
+reportExplicitAny = false
