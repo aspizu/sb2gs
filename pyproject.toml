@@ -2,26 +2,30 @@
 name = "sb2gs"
 version = "2.0.0"
 description = "sb2gs is the goboscript decompiler."
-authors = [{ name = "aspizu", email = "aspizu@protonmail.com" }]
-dependencies = []
 readme = "README.md"
-requires-python = ">= 3.13.1"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.rye]
-managed = true
-dev-dependencies = ["rich>=13.9.4"]
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/sb2gs"]
+requires-python = ">=3.13.5"
+dependencies = ["rich>=14.0.0"]
 
 [tool.pyright]
+reportUnnecessaryTypeIgnoreComment = true
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportMissingModuleSource = false
+reportMissingTypeStubs = false
+reportWildcardImportFromLibrary = false
+reportPrivateUsage = false
+reportPrivateImportUsage = false
+reportAny = false
+reportExplicitAny = false
 reportUnusedCallResult = false
 reportImportCycles = false
-reportExplicitAny = false
+
+[tool.ruff.lint]
+select = ["ALL"]
+extend-safe-fixes = ["ALL"]
+unfixable = ["F841"]
+ignore = ["A001", "A002", "A004", "ANN401", "COM", "D", "FBT", "N815"]
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
