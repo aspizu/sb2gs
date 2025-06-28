@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .decompile_code import decompile_value
+from . import syntax
 from .decompile_events import decompile_events
 from .string_builder import StringBuilder
-from .syntax import create_identifier, create_number, create_string
 
 if TYPE_CHECKING:
     from .json_object import JSONObject
@@ -33,18 +32,32 @@ class Ctx(StringBuilder):
             self.rotation_style: str = target.rotationStyle
 
 
+def decompile_constexpr(ctx: Ctx, value: object) -> None:
+    if isinstance(value, bool):
+        ctx.print('"true"' if value else '"false"')
+        return
+    if isinstance(value, (int, float)):
+        ctx.print(syntax.number(value))
+        return
+    if isinstance(value, str):
+        ctx.print(syntax.string(value))
+        return
+    msg = f"Unsupported value {value!r}"
+    raise ValueError(msg)
+
+
 def decompile_asset(ctx: Ctx, asset: JSONObject) -> None:
     ctx.print(
-        create_string("assets/" + asset.md5ext),
+        syntax.string("assets/" + asset.md5ext),
         " as ",
-        create_string(asset.name),
+        syntax.string(asset.name),
     )
 
 
 def decompile_common_properties(ctx: Ctx) -> None:
-    ctx.iprintln("layer_order ", create_number(ctx.layer_order), ";")
+    ctx.iprintln("layer_order ", syntax.number(ctx.layer_order), ";")
     if ctx.volume != DEFAULT_VOLUME:
-        ctx.iprintln("set_volume ", create_number(ctx.volume), ";")
+        ctx.iprintln("set_volume ", syntax.number(ctx.volume), ";")
 
 
 DEFAULT_VOLUME = 100
@@ -58,13 +71,13 @@ def decompile_sprite_properties(ctx: Ctx) -> None:
     if not ctx.visible:
         ctx.iprintln("hide;")
     if ctx.x != DEFAULT_X:
-        ctx.iprintln("set_x ", create_number(ctx.x), ";")
+        ctx.iprintln("set_x ", syntax.number(ctx.x), ";")
     if ctx.y != DEFAULT_Y:
-        ctx.iprintln("set_y ", create_number(ctx.y), ";")
+        ctx.iprintln("set_y ", syntax.number(ctx.y), ";")
     if ctx.size != DEFAULT_SIZE:
-        ctx.iprintln("set_size ", create_number(ctx.size), ";")
+        ctx.iprintln("set_size ", syntax.number(ctx.size), ";")
     if ctx.direction != DEFAULT_DIRECTION:
-        ctx.iprintln("point_in_direction ", create_number(ctx.direction), ";")
+        ctx.iprintln("point_in_direction ", syntax.number(ctx.direction), ";")
     decompile_rotation_style(ctx)
     if ctx.draggable:
         ctx.iprintln("set_draggable;")
@@ -101,19 +114,19 @@ def decompile_sounds(ctx: Ctx) -> None:
 
 def decompile_variables(ctx: Ctx) -> None:
     for variable_name, variable_value in ctx.variables._.values():
-        ctx.iprint("var ", create_identifier(variable_name), " = ")
-        decompile_value(ctx, variable_value)
+        ctx.iprint("var ", syntax.identifier(variable_name), " = ")
+        decompile_constexpr(ctx, variable_value)
         ctx.println(";")
 
 
 def decompile_lists(ctx: Ctx) -> None:
     for list_name, list_values in ctx.lists._.values():
-        ctx.iprint("list ", create_identifier(list_name))
+        ctx.iprint("list ", syntax.identifier(list_name))
         if not list_values:
             ctx.println(";")
             continue
         ctx.print(" = [")
-        ctx.commasep(list_values, decompile_value, pass_self=True)
+        ctx.commasep(list_values, decompile_constexpr, pass_self=True)
         ctx.println("];")
 
 

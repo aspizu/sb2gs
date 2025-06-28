@@ -6,21 +6,21 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-class JSONObject:
-    def __init__(self, dictionary: dict[str, Any]) -> None:
-        self._: dict[str, Any] = dictionary
+class JSONObject[T = Any]:
+    def __init__(self, dictionary: dict[str, T]) -> None:
+        self._: dict[str, T] = dictionary
 
     @override
     def __repr__(self) -> str:
         return repr(self._)
 
-    def __rich_repr__(self) -> Generator[dict[str, Any]]:
+    def __rich_repr__(self) -> Generator[dict[str, T]]:
         yield self._
 
     def __contains__(self, key: str) -> bool:
         return key in self._
 
-    def __getattr__(self, name: str, /) -> Any:
+    def __getattr__(self, name: str, /) -> T:
         try:
             return self._[name]
         except KeyError:

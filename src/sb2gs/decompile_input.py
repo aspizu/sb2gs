@@ -1,18 +1,27 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from rich import print
-
-from .decompile_code import decompile_value
+from . import inputs, syntax
+from .decompile_expr import decompile_expr
+from .types import InputType
 
 if TYPE_CHECKING:
     from .decompile_sprite import Ctx
     from .types import Block
 
 
-def decompile_input(ctx: Ctx, block: Block, input_name: str) -> None:
-    input = block.inputs._[input_name]
-    if input[0] == 1 and input[1][0] == 4:
-        decompile_value(ctx, input[1][1])
-    print(input)
+def decompile_input(ctx: Ctx, input_name: str, block: Block) -> None:
+    input = block.inputs._.get(input_name)
+    if input is None:
+        ctx.print("false")
+        return
+    if block_id := inputs.block_id(input):
+        decompile_expr(ctx, ctx.blocks[block_id])
+        return
+    input_type = InputType(input[1][0])
+    input_value: Any = input[1][1]
+    if input_type in (InputType.VAR, InputType.LIST):
+        ctx.print(syntax.identifier(input_value))
+        return
+    ctx.print(syntax.value(input_value))
