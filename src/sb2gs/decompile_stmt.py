@@ -102,8 +102,10 @@ BLOCKS = {
                                     "backward": "go_backward",
                                 }),
     # Sound
-    "sound_playuntildone":      _("play_sound_until_done", ["SOUND_MENU"]),
-    "sound_play":               _("start_sound", ["SOUND_MENU"]),
+    "sound_playuntildone":      _("play_sound_until_done", ["SOUND_MENU"], "SOUND_MENU",
+                                  "SOUND_MENU", {}),
+    "sound_play":               _("start_sound", ["SOUND_MENU"], "SOUND_MENU",
+                                  "SOUND_MENU", {}),
     "sound_stopallsounds":      _("stop_all_sounds", []),
     "sound_changeeffectby":     _("change_pitch_effect", ["VALUE"],
                                 field="EFFECT", overloads={
@@ -243,7 +245,7 @@ def decompile_control_repeat(ctx: Ctx, block: Block) -> None:
     decompile_stack(ctx, inputs.block_id(block.inputs._.get("SUBSTACK")))
 
 
-def decompile_repeat_until(ctx: Ctx, block: Block) -> None:
+def decompile_control_repeat_until(ctx: Ctx, block: Block) -> None:
     from .decompile_code import decompile_stack
 
     ctx.iprint("until ")
@@ -288,13 +290,15 @@ def decompile_procedures_call(ctx: Ctx, block: Block) -> None:
     ctx.println(";")
 
 
+decompile_control_wait_until = decompile_control_repeat_until
+decompile_control_if_else = decompile_control_if
+
+
 def decompile_stmt(ctx: Ctx, block: Block) -> None:
-    if (mutation := block._.get("mutation")) and mutation.proccode in ADDONS:
+    if (mutation := block._.get("mutation")) and mutation._.get("proccode") in ADDONS:
         decompiler = decompile_addon
     elif block.opcode in BLOCKS:
         decompiler = decompile_block
-    elif block.opcode in {"control_wait_until", "control_repeat_until"}:
-        decompiler = decompile_repeat_until
     else:
         decompiler = globals().get(f"decompile_{block.opcode}")
     if decompiler:
