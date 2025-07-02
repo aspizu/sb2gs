@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import math
 import re
 
 WHITESPACE_RE = re.compile(r"[\s.\-]+")
@@ -18,22 +17,18 @@ def string(text: str) -> str:
     return json.dumps(text)
 
 
-def number(num: float) -> str:
-    if math.isinf(num) and num > 0:
-        return string("Infinity")
-    if math.isinf(num) and num < 0:
-        return string("-Infinity")
-    if math.isnan(num):
-        return string("NaN")
-    if num.is_integer():
-        return str(int(num))
-    return str(num)
+def number(value: float) -> str:
+    return json.dumps(value)
+
+
+def is_goboscript_literal(text: str) -> bool:
+    with contextlib.suppress(json.JSONDecodeError):
+        parsed = json.loads(text)
+        return type(parsed) in {int, float} and json.dumps(parsed) == text
+    return False
 
 
 def value(text: str) -> str:
-    with contextlib.suppress(ValueError):
-        value = float(text)
-        result = number(value)
-        if text == result and math.isfinite(value):
-            return result
+    if is_goboscript_literal(text):
+        return text
     return string(text)

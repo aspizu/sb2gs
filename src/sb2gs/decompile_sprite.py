@@ -33,10 +33,10 @@ class Ctx(StringBuilder):
 
 
 def decompile_constexpr(ctx: Ctx, value: object) -> None:
-    if isinstance(value, bool):
+    if type(value) is bool:
         ctx.print('"true"' if value else '"false"')
         return
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         ctx.print(syntax.number(value))
         return
     if isinstance(value, str):
