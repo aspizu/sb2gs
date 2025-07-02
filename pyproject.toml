@@ -4,7 +4,13 @@ version = "2.0.0"
 description = "sb2gs is the goboscript decompiler."
 readme = "README.md"
 requires-python = ">=3.13.5"
-dependencies = ["rich>=14.0.0"]
+dependencies = [
+    "rich>=14.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pyright]
 reportUnnecessaryTypeIgnoreComment = true
@@ -25,7 +31,7 @@ reportImportCycles = false
 select = ["ALL"]
 extend-safe-fixes = ["ALL"]
 unfixable = ["F841"]
-ignore = ["A001", "A002", "A004", "ANN401", "COM", "D", "FBT", "N815"]
+ignore = ["A001", "A002", "A004", "ANN401", "COM", "D", "FBT", "N815", "PLR0911"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]

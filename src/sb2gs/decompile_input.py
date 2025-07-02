@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from . import inputs, syntax
+from ._types import InputType
 from .decompile_expr import decompile_expr
-from .types import InputType
 
 if TYPE_CHECKING:
+    from ._types import Block
     from .decompile_sprite import Ctx
-    from .types import Block
 
 
 def decompile_input(ctx: Ctx, input_name: str, block: Block) -> None:
@@ -21,7 +21,7 @@ def decompile_input(ctx: Ctx, input_name: str, block: Block) -> None:
         return
     input_type = InputType(input[1][0])
     input_value: Any = input[1][1]
-    if input_type in (InputType.VAR, InputType.LIST):
+    if input_type in {InputType.VAR, InputType.LIST}:
         ctx.print(syntax.identifier(input_value))
         return
     ctx.print(syntax.value(input_value))

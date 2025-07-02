@@ -6,5 +6,5 @@ wheels/
 *.egg-info
 .venv
 .pytest_cache/
-
 *.sb3
+playground/

@@ -7,8 +7,8 @@ from .decompile_events import decompile_events
 from .string_builder import StringBuilder
 
 if TYPE_CHECKING:
+    from ._types import Block
     from .json_object import JSONObject
-    from .types import Block
 
 
 class Ctx(StringBuilder):
@@ -55,7 +55,6 @@ def decompile_asset(ctx: Ctx, asset: JSONObject) -> None:
 
 
 def decompile_common_properties(ctx: Ctx) -> None:
-    ctx.iprintln("layer_order ", syntax.number(ctx.layer_order), ";")
     if ctx.volume != DEFAULT_VOLUME:
         ctx.iprintln("set_volume ", syntax.number(ctx.volume), ";")
 
@@ -68,6 +67,7 @@ DEFAULT_DIRECTION = 90
 
 
 def decompile_sprite_properties(ctx: Ctx) -> None:
+    ctx.iprintln("set_layer_order ", syntax.number(ctx.layer_order), ";")
     if not ctx.visible:
         ctx.iprintln("hide;")
     if ctx.x != DEFAULT_X:

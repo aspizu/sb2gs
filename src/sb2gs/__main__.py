@@ -8,6 +8,8 @@ from time import perf_counter_ns
 
 from rich import print
 
+from sb2gs._logging import setup_logging
+
 from .decompile import decompile
 from .errors import Error
 
@@ -44,6 +46,7 @@ def determine_output_path(input: Path, output: Path | None, overwrite: bool) -> 
 
 
 def main() -> None:
+    setup_logging()
     argparser = ArgumentParser()
     argparser.add_argument("input", type=input_type)
     argparser.add_argument("output", nargs="?", type=output_type)
