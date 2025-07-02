@@ -47,6 +47,7 @@ class Operator:
 OPERATORS = { k: Operator(*v) for k, v in {
     #       OPCODE       | SYMBOL | PRECEDENCE |    LEFT    |    RIGHT   |    ASSOC    #
     #--------------------|--------|------------|------------|--------------------------#
+    "operator_letter_of" :( ""    , 1          , "LETTER"   , "STRING"   , Assoc.LEFT ),
     "operator_not"       :( "not" , 1          , "OPERAND"  , ""         , Assoc.LEFT ),
     "operator_negative"  :( "-"   , 1          , ""         , "NUM"      , Assoc.RIGHT),
     "operator_multiply"  :( "*"   , 2          , "NUM1"     , "NUM2"     , Assoc.LEFT ),
@@ -187,8 +188,8 @@ BLOCKS = {
                                         "atan": "atan",
                                         "ln": "ln",
                                         "log": "log",
-                                        "e ^": "anti_ln",
-                                        "10 ^": "anti_log",
+                                        "e ^": "antiln",
+                                        "10 ^": "antilog",
                                     }),
 }
 del _
@@ -214,10 +215,13 @@ def decompile_block(ctx: Ctx, block: Block) -> None:
     ctx.print(")")
 
 
+UNARY_OPCODES = {"operator_letter_of", "operator_not"}
+
+
 def decompile_expr(ctx: Ctx, block: Block) -> None:
     if block.opcode in MENUS:
         decompiler = decompile_menu
-    elif block.opcode in OPERATORS:
+    elif block.opcode in OPERATORS and block.opcode not in UNARY_OPCODES:
         decompiler = decompile_binary_operator
     elif block.opcode in BLOCKS:
         decompiler = decompile_block
