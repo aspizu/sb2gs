@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from copy import deepcopy
@@ -24,17 +25,33 @@ BLOCKS = {
     "motion_movesteps":         _("move", ["STEPS"]),
     "motion_turnleft":          _("turn_left", ["DEGREES"]),
     "motion_turnright":         _("turn_right", ["DEGREES"]),
+    "motion_goto":              _("goto", ["TO"], menu="TO", field="TO", overloads={
+                                    "_mouse_": "goto_mouse_pointer",
+                                    "_random_": "goto_random_position",
+                                }),
     "motion_gotoxy":            _("goto", ["X", "Y"]),
     "motion_glidesecstoxy":     _("glide", ["X", "Y", "SECS"]),
+    "motion_glideto":           _("glide", ["TO", "SECS"], menu="TO", field="TO",
+                                overloads={
+                                    "_mouse_": "glide_to_mouse_pointer",
+                                    "_random_": "glide_to_random_position",
+                                }),
     "motion_pointindirection":  _("point_in_direction", ["DIRECTION"]),
+    "motion_pointtowards":      _("point_towards", ["TOWARDS"], menu="TOWARDS",
+                                field="TOWARDS", overloads={
+                                    "_mouse_": "point_towards_mouse_pointer",
+                                    "_random_": "point_towards_random_direction",
+                                }),
     "motion_changexby":         _("change_x", ["DX"]),
     "motion_setx":              _("set_x", ["X"]),
     "motion_changeyby":         _("change_y", ["DY"]),
     "motion_sety":              _("set_y", ["Y"]),
     "motion_ifonedgebounce":    _("if_on_edge_bounce", []),
-    "motion_goto":              _("goto", ["TO"], menu="TO", field="TO", overloads={
-                                    "_mouse_": "goto_mouse_pointer",
-                                    "_random_": "goto_random_position",
+    "motion_setrotationstyle":  _("set_rotation_style_all_around", [],
+                                field="STYLE", overloads={
+                                    "left-right": "set_rotation_style_left_right",
+                                    "don't rotate": "set_rotation_style_do_not_rotate",
+                                    "all around": "set_rotation_style_all_around",
                                 }),
     # Looks
     "looks_sayforsecs":         _("say", ["MESSAGE", "SECS"]),
@@ -43,16 +60,61 @@ BLOCKS = {
     "looks_think":              _("think", ["MESSAGE"]),
     "looks_switchcostumeto":    _("switch_costume", ["COSTUME"]),
     "looks_nextcostume":        _("next_costume", []),
+    "looks_switchbackdropto":   _("switch_backdrop", ["BACKDROP"], menu="BACKDROP",
+                                field="BACKDROP", overloads={
+                                    "next backdrop": "next_backdrop",
+                                    "previous backdrop": "previous_backdrop",
+                                    "random backdrop": "random_backdrop",
+                                }),
     "looks_nextbackdrop":       _("next_backdrop", []),
     "looks_setsizeto":          _("set_size", ["SIZE"]),
     "looks_changesizeby":       _("change_size", ["CHANGE"]),
+    "looks_changeeffectby":     _("change_color_effect", ["CHANGE"],
+                                field="EFFECT", overloads={
+                                    "COLOR": "change_color_effect",
+                                    "FISHEYE": "change_fisheye_effect",
+                                    "WHIRL": "change_whirl_effect",
+                                    "PIXELATE": "change_pixelate_effect",
+                                    "MOSAIC": "change_mosaic_effect",
+                                    "BRIGHTNESS": "change_brightness_effect",
+                                    "GHOST": "change_ghost_effect",
+                                }),
+    "looks_seteffectto":        _("set_color_effect", ["VALUE"],
+                                field="EFFECT", overloads={
+                                    "COLOR": "set_color_effect",
+                                    "FISHEYE": "set_fisheye_effect",
+                                    "WHIRL": "set_whirl_effect",
+                                    "PIXELATE": "set_pixelate_effect",
+                                    "MOSAIC": "set_mosaic_effect",
+                                    "BRIGHTNESS": "set_brightness_effect",
+                                    "GHOST": "set_ghost_effect",
+                                }),
     "looks_cleargraphiceffects":_("clear_graphic_effects", []),
     "looks_show":               _("show", []),
     "looks_hide":               _("hide", []),
+    "looks_gotofrontback":      _("goto_front", [], field="FRONT_BACK", overloads={
+                                    "front": "goto_front",
+                                    "back": "goto_back",
+                                }),
+    "looks_goforwardbackwardlayers": _("go_forward", ["NUM"],
+                                field="FORWARD_BACKWARD", overloads={
+                                    "forward": "go_forward",
+                                    "backward": "go_backward",
+                                }),
     # Sound
     "sound_playuntildone":      _("play_sound_until_done", ["SOUND_MENU"]),
     "sound_play":               _("start_sound", ["SOUND_MENU"]),
     "sound_stopallsounds":      _("stop_all_sounds", []),
+    "sound_changeeffectby":     _("change_pitch_effect", ["VALUE"],
+                                field="EFFECT", overloads={
+                                    "PITCH": "change_pitch_effect",
+                                    "PAN": "change_pan_effect",
+                                }),
+    "sound_seteffectto":        _("set_pitch_effect", ["VALUE"],
+                                field="EFFECT", overloads={
+                                    "PITCH": "set_pitch_effect",
+                                    "PAN": "set_pan_effect",
+                                }),
     "sound_changevolumeby":     _("change_volume", ["VOLUME"]),
     "sound_setvolumeto":        _("set_volume", ["VOLUME"]),
     "sound_cleareffects":       _("clear_sound_effects", []),
@@ -61,9 +123,23 @@ BLOCKS = {
     "event_broadcastandwait":   _("broadcast_and_wait", ["BROADCAST_INPUT"]),
     # Control
     "control_wait":             _("wait", ["DURATION"]),
+    "control_stop":             _("stop_all", [], field="STOP_OPTION", overloads={
+                                    "all": "stop_all",
+                                    "this script": "stop_this_script",
+                                    "other scripts in sprite": "stop_other_scripts",
+                                }),
     "control_delete_this_clone":_("delete_this_clone", []),
+    "control_create_clone_of":  _("clone", ["CLONE_OPTION"], menu="CLONE_OPTION",
+                                field="CLONE_OPTION", overloads={
+                                    "_myself_": "clone",
+                                }),
     # Sensing
     "sensing_askandwait":       _("ask", ["QUESTION"]),
+    "sensing_setdragmode":      _("set_drag_mode_draggable", [],
+                                field="DRAG_MODE", overloads={
+                                    "draggable": "set_drag_mode_draggable",
+                                    "not draggable": "set_drag_mode_not_draggable",
+                                }),
     "sensing_resettimer":       _("reset_timer", []),
     # Pen
     "pen_clear":                _("erase_all", []),
@@ -73,6 +149,20 @@ BLOCKS = {
     "pen_setPenColorToColor":   _("set_pen_color", ["COLOR"]),
     "pen_changePenSizeBy":      _("change_pen_size", ["SIZE"]),
     "pen_setPenSizeTo":         _("set_pen_size", ["SIZE"]),
+    "pen_setPenColorParamTo":   _("set_pen_hue", ["VALUE"],
+                                field="COLOR_PARAM", overloads={
+                                    "color": "set_pen_hue",
+                                    "saturation": "set_pen_saturation",
+                                    "brightness": "set_pen_brightness",
+                                    "transparency": "set_pen_transparency",
+                                }),
+    "pen_changePenColorParamBy":_("change_pen_hue", ["VALUE"],
+                                field="COLOR_PARAM", overloads={
+                                    "color": "change_pen_hue",
+                                    "saturation": "change_pen_saturation",
+                                    "brightness": "change_pen_brightness",
+                                    "transparency": "change_pen_transparency",
+                                }),
     # Music
     "music_restForBeats":       _("rest", ["BEATS"]),
     "music_setTempo":           _("set_tempo", ["TEMPO"]),
@@ -89,7 +179,8 @@ def decompile_block(ctx: Ctx, block: Block) -> None:
     if field := block.fields._.get(signature.field or ""):
         if opcode := unwrap(signature.overloads).get(field[0]):
             signature.opcode = opcode
-            signature.inputs.remove(unwrap(signature.field))
+            with contextlib.suppress(ValueError):
+                signature.inputs.remove(unwrap(signature.field))
         else:
             block.inputs._[unwrap(signature.field)] = [1, [4, field[0]]]
     ctx.iprint(signature.opcode)

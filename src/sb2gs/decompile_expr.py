@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 from copy import deepcopy
 from dataclasses import dataclass
@@ -8,7 +9,6 @@ from typing import TYPE_CHECKING
 
 from . import ast, inputs, syntax
 from ._types import Signature
-from .decompile_input import decompile_input
 from .utils import unwrap
 
 if TYPE_CHECKING:
@@ -118,20 +118,93 @@ def decompile_binary_operator(ctx: Ctx, block: Block) -> None:
 # fmt: off
 _ = Signature
 BLOCKS = {
-
+    # Motion
+    "motion_xposition":             _("x_position", []),
+    "motion_yposition":             _("y_position", []),
+    "motion_direction":             _("direction", []),
+    # Looks
+    "looks_size":                   _("size", []),
+    "looks_costumenumbername":      _("costume_number", [], field="NUMBER_NAME",
+                                    overloads={
+                                        "number": "costume_number",
+                                        "name": "costume_name",
+                                    }),
+    "looks_backdropnumbername":     _("backdrop_number", [], field="NUMBER_NAME",
+                                    overloads={
+                                        "number": "backdrop_number",
+                                        "name": "backdrop_name",
+                                    }),
+    # Sound
+    "sound_volume":                 _("volume", []),
+    # Sensing
+    "sensing_distanceto":           _("distance_to_mouse_pointer", [],
+                                    menu="DISTANCETOMENU", field="DISTANCETOMENU",
+                                    overloads={
+                                        "_mouse_": "distance_to_mouse_pointer",
+                                    }),
+    "sensing_touchingobject":       _("touching_mouse_pointer", [],
+                                    menu="TOUCHINGOBJECTMENU",
+                                    field="TOUCHINGOBJECTMENU", overloads={
+                                        "_mouse_": "touching_mouse_pointer",
+                                        "_edge_": "touching_edge",
+                                    }),
+    "sensing_keypressed":           _("key_pressed", ["KEY_OPTION"]),
+    "sensing_mousedown":            _("mouse_down", []),
+    "sensing_mousex":               _("mouse_x", []),
+    "sensing_mousey":               _("mouse_y", []),
+    "sensing_loudness":             _("loudness", []),
+    "sensing_timer":                _("timer", []),
+    "sensing_current":              _("current_year", [], field="CURRENTMENU",
+                                    overloads={
+                                        "YEAR": "current_year",
+                                        "MONTH": "current_month",
+                                        "DATE": "current_date",
+                                        "DAYOFWEEK": "current_day_of_week",
+                                        "HOUR": "current_hour",
+                                        "MINUTE": "current_minute",
+                                        "SECOND": "current_second",
+                                    }),
+    "sensing_dayssince2000":        _("days_since_2000", []),
+    "sensing_username":             _("username", []),
+    "sensing_touchingcolor":        _("touching_color", ["COLOR"]),
+    "sensing_coloristouchingcolor": _("color_is_touching_color", ["COLOR", "COLOR2"]),
+    "sensing_answer":               _("answer", []),
+    # Operator
+    "operator_random":              _("random", ["FROM", "TO"]),
+    "operator_length":              _("length", ["STRING"]),
+    "operator_round":               _("round", ["NUM"]),
+    "operator_mathop":              _("abs", ["NUM"], field="OPERATOR", overloads={
+                                        "abs": "abs",
+                                        "floor": "floor",
+                                        "ceiling": "ceil",
+                                        "sqrt": "sqrt",
+                                        "sin": "sin",
+                                        "cos": "cos",
+                                        "tan": "tan",
+                                        "asin": "asin",
+                                        "acos": "acos",
+                                        "atan": "atan",
+                                        "ln": "ln",
+                                        "log": "log",
+                                        "e ^": "anti_ln",
+                                        "10 ^": "anti_log",
+                                    }),
 }
 del _
 # fmt: on
 
 
 def decompile_block(ctx: Ctx, block: Block) -> None:
+    from .decompile_input import decompile_input
+
     signature = deepcopy(BLOCKS[block.opcode])
     if signature.menu:
         ast.flatten_menu(ctx, block, signature.menu)
     if field := block.fields._.get(signature.field or ""):
         if opcode := unwrap(signature.overloads).get(field[0]):
             signature.opcode = opcode
-            signature.inputs.remove(unwrap(signature.field))
+            with contextlib.suppress(ValueError):
+                signature.inputs.remove(unwrap(signature.field))
         else:
             block.inputs._[unwrap(signature.field)] = [1, [4, field[0]]]
     ctx.print(signature.opcode, "(")
@@ -145,6 +218,8 @@ def decompile_expr(ctx: Ctx, block: Block) -> None:
         decompiler = decompile_menu
     elif block.opcode in OPERATORS:
         decompiler = decompile_binary_operator
+    elif block.opcode in BLOCKS:
+        decompiler = decompile_block
     else:
         decompiler = globals().get(f"decompile_{block.opcode}")
     if decompiler:
