@@ -67,6 +67,7 @@ def decompile_event(ctx: Ctx, block: Block) -> None:
         block.opcode in decompile_stmt.BLOCKS
         or block.opcode in decompile_expr.BLOCKS
         or block.opcode in decompile_expr.OPERATORS
+        or block.opcode in decompile_expr.MENUS
         or f"decompile_{block.opcode}" in decompile_stmt.__dict__
         or f"decompile_{block.opcode}" in decompile_expr.__dict__
     ):
@@ -76,5 +77,7 @@ def decompile_event(ctx: Ctx, block: Block) -> None:
 
 def decompile_events(ctx: Ctx) -> None:
     for block in ctx.blocks.values():
+        if isinstance(block, list):
+            continue
         if block.topLevel:
             decompile_event(ctx, block)

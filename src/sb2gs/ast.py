@@ -143,6 +143,7 @@ def transform_augmented_replace_list_item(ctx: Ctx, block: Block) -> None:
         (operand := inputs.block(ctx, block, "ITEM"))
         and operand.opcode in ARITHMETIC_OPCODES
         and (lhs := inputs.block(ctx, operand, "NUM1"))
+        and lhs.opcode == "data_itemoflist"
         and lhs.fields.LIST[0] == block.fields.LIST[0]
         and compare_inputs(
             ctx,
@@ -161,6 +162,7 @@ def transform_augmented_replace_list_item_join(ctx: Ctx, block: Block) -> None:
         (operand := inputs.block(ctx, block, "ITEM"))
         and operand.opcode == "operator_join"
         and (lhs := inputs.block(ctx, operand, "STRING1"))
+        and lhs.opcode == "data_itemoflist"
         and lhs.fields.LIST[0] == block.fields.LIST[0]
         and compare_tree(
             ctx,
@@ -180,4 +182,6 @@ def transform_block(ctx: Ctx, block: Block) -> None:
 
 def transform(ctx: Ctx) -> None:
     for block in ctx.blocks.values():
+        if isinstance(block, list):
+            continue
         transform_block(ctx, block)

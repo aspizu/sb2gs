@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from . import inputs, syntax
@@ -10,10 +11,12 @@ if TYPE_CHECKING:
     from ._types import Block
     from .decompile_sprite import Ctx
 
+logger = logging.getLogger(__name__)
+
 
 def decompile_input(ctx: Ctx, input_name: str, block: Block) -> None:
     input = block.inputs._.get(input_name)
-    if input is None:
+    if input is None or input == [1, None]:
         ctx.print("false")
         return
     if block_id := inputs.block_id(input):
