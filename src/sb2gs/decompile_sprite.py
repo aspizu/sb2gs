@@ -115,7 +115,7 @@ def decompile_sounds(ctx: Ctx) -> None:
 
 
 def decompile_variables(ctx: Ctx) -> None:
-    for variable_name, variable_value in ctx.variables._.values():
+    for variable_name, variable_value, *_ in ctx.variables._.values():
         ctx.iprint("var ", syntax.identifier(variable_name), " = ")
         decompile_constexpr(ctx, variable_value)
         ctx.println(";")
