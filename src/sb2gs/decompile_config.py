@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import toml
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from .json_object import JSONObject
 
 logger = logging.getLogger(__name__)
@@ -24,25 +28,32 @@ class Config:
     stage_width: int | None = None
     stage_height: int | None = None
 
-    def to_json(self) -> dict[str, object]:
-        return self.__dict__
 
-
-def get_config(project: JSONObject) -> Config:
+def find_turbowarp_config_comment(project: JSONObject) -> str | None:
     stage = next(target for target in project.targets if target.isStage)
-    comment: str | None = next(
-        (
-            comment.text
-            for comment in stage.comments._.values()
-            if comment.text.endswith("// _twconfig_")
-        ),
-        None,
-    )
-    if comment is None:
-        return Config()
-    data = json.loads(comment[comment.find("{") : comment.rfind("}") + 1])
-    runtime_options = data.get("runtimeOptions", {})
+    for comment in stage.comments._.values():
+        if comment.text.endswith("_twconfig_"):
+            return comment.text
+    return None
+
+
+def parse_turbowarp_config_comment(text: str | None) -> dict[str, Any] | None:
+    if text is None:
+        return None
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1:
+        return None
+    try:
+        return json.loads(text[start : end + 1])
+    except json.JSONDecodeError:
+        return None
+
+
+def decompile_config(project: JSONObject, output: Path) -> None:
     config = Config()
+    data = parse_turbowarp_config_comment(find_turbowarp_config_comment(project)) or {}
+    runtime_options = data.get("runtimeOptions", {})
     config.frame_rate = data.get("framerate")
     config.max_clones = runtime_options.get("maxClones")
     config.no_miscellaneous_limits = runtime_options.get("miscLimits") is False
@@ -51,4 +62,5 @@ def get_config(project: JSONObject) -> Config:
     config.high_quality_pen = data.get("hq") is True
     config.stage_width = data.get("width")
     config.stage_height = data.get("height")
-    return config
+    with output.joinpath("goboscript.toml").open("w") as file:
+        toml.dump(config.__dict__, file)

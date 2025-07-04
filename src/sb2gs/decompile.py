@@ -5,10 +5,9 @@ import shutil
 from typing import TYPE_CHECKING
 from zipfile import ZipFile
 
-import toml
+from sb2gs.decompile_config import decompile_config
 
 from . import costumes
-from .config import get_config
 from .decompile_sprite import Ctx, decompile_sprite
 from .errors import Error
 from .json_object import JSONObject
@@ -46,5 +45,4 @@ def decompile(input: Path, output: Path) -> None:
         with output.joinpath(f"{target.name}.gs").open("w") as file:
             decompile_sprite(ctx)
             file.write(str(ctx))
-    with output.joinpath("goboscript.toml").open("w") as f:
-        toml.dump(get_config(project).to_json(), f)
+    decompile_config(project, output)
