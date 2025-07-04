@@ -4,9 +4,8 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any
 
-from sb2gs.decompile_expr import OPERATORS
-
 from . import inputs
+from .decompile_expr import OPERATORS
 
 if TYPE_CHECKING:
     from collections.abc import Callable

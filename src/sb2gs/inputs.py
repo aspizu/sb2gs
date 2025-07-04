@@ -3,11 +3,11 @@ from __future__ import annotations
 import builtins
 from typing import TYPE_CHECKING, Any
 
-from sb2gs._types import InputType
+from ._types import InputType
 
 if TYPE_CHECKING:
-    from sb2gs._types import Block
-    from sb2gs.decompile_sprite import Ctx
+    from ._types import Block
+    from .decompile_sprite import Ctx
 
 
 def block_id(input: builtins.list[Any] | None) -> str | None:
