@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 MENUS = {
     "looks_costume": ("COSTUME", False),
+    "sensing_of_object_menu": ("OBJECT", False),
 }
 
 
@@ -49,7 +50,7 @@ OPERATORS = { k: Operator(*v) for k, v in {
     #--------------------|--------|------------|------------|--------------------------#
     "operator_letter_of" :( ""    , 1          , "LETTER"   , "STRING"   , Assoc.LEFT ),
     "operator_not"       :( "not" , 1          , "OPERAND"  , ""         , Assoc.LEFT ),
-    "operator_negative"  :( "-"   , 1          , ""         , "NUM"      , Assoc.RIGHT),
+    "operator_negative"  :( "-"   , 1          , ""         , "NUM2"     , Assoc.RIGHT),
     "operator_multiply"  :( "*"   , 2          , "NUM1"     , "NUM2"     , Assoc.LEFT ),
     "operator_divide"    :( "/"   , 2          , "NUM1"     , "NUM2"     , Assoc.LEFT ),
     "operator_mod"       :( "%"   , 2          , "NUM1"     , "NUM2"     , Assoc.LEFT ),
@@ -61,6 +62,7 @@ OPERATORS = { k: Operator(*v) for k, v in {
     "operator_ge"        :( ">="  , 4          , "OPERAND1" , "OPERAND2" , Assoc.LEFT ),
     "operator_join"      :( "&"   , 5          , "STRING1"  , "STRING2"  , Assoc.LEFT ),
     "operator_contains"  :( "in"  , 6          , "STRING2"  , "STRING1"  , Assoc.LEFT ),
+    "data_itemnumoflist" :( "in"  , 6          , ""         , ""         , Assoc.LEFT ),
     "operator_equals"    :( "=="  , 6          , "OPERAND1" , "OPERAND2" , Assoc.LEFT ),
     "operator_notequals" :( "!="  , 6          , "OPERAND1" , "OPERAND2" , Assoc.LEFT ),
     "operator_and"       :( "and" , 7          , "OPERAND1" , "OPERAND2" , Assoc.LEFT ),
@@ -97,6 +99,11 @@ def decompile_operand(ctx: Ctx, op_name: str, block: Block, assoc: Assoc) -> Non
 def decompile_operator_not(ctx: Ctx, block: Block) -> None:
     ctx.print("not ")
     decompile_operand(ctx, "OPERAND", block, Assoc.LEFT)
+
+
+def decompile_operator_negative(ctx: Ctx, block: Block) -> None:
+    ctx.print("-")
+    decompile_operand(ctx, "NUM2", block, Assoc.LEFT)
 
 
 def decompile_operator_letter_of(ctx: Ctx, block: Block) -> None:
@@ -215,13 +222,48 @@ def decompile_block(ctx: Ctx, block: Block) -> None:
     ctx.print(")")
 
 
-UNARY_OPCODES = {"operator_letter_of", "operator_not"}
+def decompile_sensing_of(ctx: Ctx, block: Block) -> None:
+    from .decompile_input import decompile_input
+
+    decompile_input(ctx, "OBJECT", block)
+    ctx.print(".", syntax.string(block.fields.PROPERTY[0]))
+
+
+def decompile_data_itemoflist(ctx: Ctx, block: Block) -> None:
+    from .decompile_input import decompile_input
+
+    ctx.print(syntax.identifier(block.fields.LIST[0]), "[")
+    decompile_input(ctx, "INDEX", block)
+    ctx.print("]")
+
+
+def decompile_data_itemnumoflist(ctx: Ctx, block: Block) -> None:
+    decompile_operand(ctx, "ITEM", block, Assoc.LEFT)
+    ctx.print(" in ", syntax.identifier(block.fields.LIST[0]))
+
+
+def decompile_data_lengthoflist(ctx: Ctx, block: Block) -> None:
+    ctx.print("length(", syntax.identifier(block.fields.LIST[0]), ")")
+
+
+def decompile_argument_reporter_string_number(ctx: Ctx, block: Block) -> None:
+    ctx.print("$", syntax.identifier(block.fields.VALUE[0]))
+
+
+decompile_argument_reporter_boolean = decompile_argument_reporter_string_number
+
+UNREAL_OPCODES = {
+    "operator_letter_of",
+    "operator_not",
+    "operator_negative",
+    "data_itemnumoflist",
+}
 
 
 def decompile_expr(ctx: Ctx, block: Block) -> None:
     if block.opcode in MENUS:
         decompiler = decompile_menu
-    elif block.opcode in OPERATORS and block.opcode not in UNARY_OPCODES:
+    elif block.opcode in OPERATORS and block.opcode not in UNREAL_OPCODES:
         decompiler = decompile_binary_operator
     elif block.opcode in BLOCKS:
         decompiler = decompile_block

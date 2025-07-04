@@ -290,6 +290,70 @@ def decompile_procedures_call(ctx: Ctx, block: Block) -> None:
     ctx.println(";")
 
 
+def decompile_data_setvariableto(ctx: Ctx, block: Block) -> None:
+    ctx.iprint(syntax.identifier(block.fields.VARIABLE[0]), " = ")
+    decompile_input(ctx, "VALUE", block)
+    ctx.println(";")
+
+
+def decompile_data_changevariableby(ctx: Ctx, block: Block) -> None:
+    op = block._.get("OPERATOR", "+")
+    ctx.iprint(syntax.identifier(block.fields.VARIABLE[0]), f" {op}= ")
+    decompile_input(ctx, "VALUE", block)
+    ctx.println(";")
+
+
+def decompile_data_showvariable(ctx: Ctx, block: Block) -> None:
+    ctx.iprintln("show ", syntax.identifier(block.fields.VARIABLE[0]), ";")
+
+
+def decompile_data_hidevariable(ctx: Ctx, block: Block) -> None:
+    ctx.iprintln("hide ", syntax.identifier(block.fields.VARIABLE[0]), ";")
+
+
+def decompile_data_addtolist(ctx: Ctx, block: Block) -> None:
+    ctx.iprint("add ")
+    decompile_input(ctx, "ITEM", block)
+    ctx.println(" to ", syntax.identifier(block.fields.LIST[0]), ";")
+
+
+def decompile_data_deleteoflist(ctx: Ctx, block: Block) -> None:
+    ctx.print("delete ", syntax.identifier(block.fields.LIST[0]), "[")
+    decompile_input(ctx, "INDEX", block)
+    ctx.println("];")
+
+
+def decompile_data_deletealloflist(ctx: Ctx, block: Block) -> None:
+    ctx.iprint("delete ")
+    ctx.print(syntax.identifier(block.fields.LIST[0]))
+    ctx.println(";")
+
+
+def decompile_data_insertatlist(ctx: Ctx, block: Block) -> None:
+    ctx.iprint("insert ")
+    decompile_input(ctx, "ITEM", block)
+    ctx.print(" at ", syntax.identifier(block.fields.LIST[0]), "[")
+    decompile_input(ctx, "INDEX", block)
+    ctx.println("];")
+
+
+def decompile_data_replaceitemoflist(ctx: Ctx, block: Block) -> None:
+    ctx.iprint(syntax.identifier(block.fields.LIST[0]), "[")
+    decompile_input(ctx, "INDEX", block)
+    op = block._.get("OPERATOR", "")
+    ctx.print(f"] {op}= ")
+    decompile_input(ctx, "ITEM", block)
+    ctx.println(";")
+
+
+def decompile_data_showlist(ctx: Ctx, block: Block) -> None:
+    ctx.iprintln("show ", syntax.identifier(block.fields.LIST[0]), ";")
+
+
+def decompile_data_hidelist(ctx: Ctx, block: Block) -> None:
+    ctx.iprintln("hide ", syntax.identifier(block.fields.LIST[0]), ";")
+
+
 decompile_control_wait_until = decompile_control_repeat_until
 decompile_control_if_else = decompile_control_if
 

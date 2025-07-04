@@ -5,7 +5,9 @@ description = "sb2gs is the goboscript decompiler."
 readme = "README.md"
 requires-python = ">=3.13.5"
 dependencies = [
+    "pillow>=11.3.0",
     "rich>=14.0.0",
+    "toml>=0.10.2",
 ]
 
 [build-system]
@@ -26,12 +28,13 @@ reportAny = false
 reportExplicitAny = false
 reportUnusedCallResult = false
 reportImportCycles = false
+reportImplicitStringConcatenation = false
 
 [tool.ruff.lint]
 select = ["ALL"]
 extend-safe-fixes = ["ALL"]
 unfixable = ["F841"]
-ignore = ["A001", "A002", "A004", "ANN401", "COM", "D", "FBT", "N815", "PLR0911"]
+ignore = ["A001", "A002", "A004", "ANN401", "COM", "D", "FBT", "N815", "PLR0911", "S101", "PLR2004", "S314"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]

@@ -6,9 +6,17 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
+class JSONDict[T = Any](dict[str, T]):
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            k: v._.to_dict() if isinstance(v, JSONObject) else v
+            for k, v in self.items()
+        }
+
+
 class JSONObject[T = Any]:
     def __init__(self, dictionary: dict[str, T]) -> None:
-        self._: dict[str, T] = dictionary
+        self._: JSONDict[T] = JSONDict[T](dictionary)
 
     @override
     def __repr__(self) -> str:

@@ -8,10 +8,10 @@ from time import perf_counter_ns
 
 from rich import print
 
-from sb2gs._logging import setup_logging
-
+from ._logging import setup_logging
 from .decompile import decompile
 from .errors import Error
+from .verify import verify
 
 
 def input_type(value: str) -> Path:
@@ -37,8 +37,7 @@ def output_type(value: str) -> Path:
 
 
 def determine_output_path(input: Path, output: Path | None, overwrite: bool) -> Path:
-    if not output:
-        output = Path(input.stem)
+    output = output or input.parent.joinpath(input.stem)
     if output.exists() and not overwrite:
         msg = "output directory already exists. (use --overwrite to overwrite)"
         raise Error(msg)
@@ -51,9 +50,17 @@ def main() -> None:
     argparser.add_argument("input", type=input_type)
     argparser.add_argument("output", nargs="?", type=output_type)
     argparser.add_argument("--overwrite", action="store_true")
+    argparser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Invoke goboscript to verify that the decompiled code is valid. This does "
+        "not indicate that the decompiled code is equivalent to the original.",
+    )
     args = argparser.parse_args()
     args.output = determine_output_path(args.input, args.output, args.overwrite)
     decompile(args.input, args.output)
+    if args.verify:
+        verify(args.output)
 
 
 before = perf_counter_ns()

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
-from . import syntax
+from . import ast, syntax
 from .decompile_events import decompile_events
 from .string_builder import StringBuilder
 
 if TYPE_CHECKING:
     from ._types import Block
     from .json_object import JSONObject
+logger = logging.getLogger(__name__)
 
 
 class Ctx(StringBuilder):
@@ -131,6 +133,7 @@ def decompile_lists(ctx: Ctx) -> None:
 
 
 def decompile_sprite(ctx: Ctx) -> None:
+    ast.transform(ctx)
     decompile_properties(ctx)
     decompile_costumes(ctx)
     decompile_sounds(ctx)
