@@ -3,7 +3,7 @@ name = "sb2gs"
 version = "2.0.0"
 description = "sb2gs is the goboscript decompiler."
 readme = "README.md"
-requires-python = ">=3.13.5"
+requires-python = ">=3.13.0"
 dependencies = [
     "pillow>=11.3.0",
     "rich>=14.0.0",
