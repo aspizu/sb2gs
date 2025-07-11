@@ -46,7 +46,7 @@ def determine_output_path(input: Path, output: Path | None, overwrite: bool) -> 
 
 def main() -> None:
     setup_logging()
-    argparser = ArgumentParser()
+    argparser = ArgumentParser("sb2gs")
     argparser.add_argument("input", type=input_type)
     argparser.add_argument("output", nargs="?", type=output_type)
     argparser.add_argument("--overwrite", action="store_true")
