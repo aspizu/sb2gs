@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import contextlib
+import functools
+import itertools
 import json
 import re
 
@@ -77,10 +79,27 @@ KEYWORDS = {
 }
 
 
+@functools.cache
+def get_blocknames() -> set[str]:
+    from . import decompile_expr, decompile_stmt
+
+    all_signatures = itertools.chain(
+        decompile_stmt.BLOCKS.values(),
+        decompile_expr.BLOCKS.values(),
+    )
+    blocknames = set()
+    for s in all_signatures:
+        blocknames.add(s.opcode)
+        if s.overloads:
+            for overload in s.overloads.values():
+                blocknames.add(overload)
+    return blocknames
+
+
 def identifier(identifier: str) -> str:
     identifier = "_".join(WHITESPACE_RE.split(identifier))
     identifier = INVALID_CHARS_RE.sub("", identifier)
-    if identifier in KEYWORDS:
+    if identifier in KEYWORDS or identifier in get_blocknames():
         identifier += "_"
     return identifier
 
