@@ -1,17 +1,17 @@
 ## Installation
 
-Install Python >= 3.13.0, then run:
+If you installed goboscript using the auto-install script, then sb2gs should be already installed.
+
+Install uv and run.
 
 ```shell
-git clone https://github.com/aspizu/sb2gs
-cd sb2gs
-python -m pip install --editable .
+uv tool install git+https://github.com/aspizu/sb2gs
 ```
 
 ## Usage
 
 ```
-usage: sb2gs [-h] [--overwrite] [--verify] input [output]                                                                                                                                                                                                       
+usage: sb2gs [-h] [--overwrite] [--verify] input [output]
 positional arguments:
   input
   output
