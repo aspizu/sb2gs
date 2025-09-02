@@ -4,6 +4,7 @@ import contextlib
 import functools
 import itertools
 import json
+import logging
 import re
 
 WHITESPACE_RE = re.compile(r"[\s.\-]+")
@@ -77,6 +78,7 @@ KEYWORDS = {
     "set_layer_order",
     "var",
 }
+identifier_map: dict[str, str] = {}
 
 
 @functools.cache
@@ -96,12 +98,37 @@ def get_blocknames() -> set[str]:
     return blocknames
 
 
-def identifier(identifier: str) -> str:
-    identifier = "_".join(WHITESPACE_RE.split(identifier))
-    identifier = INVALID_CHARS_RE.sub("", identifier)
-    if identifier in KEYWORDS or identifier in get_blocknames():
-        identifier += "_"
-    return identifier
+def identifier(og: str) -> str:
+    if og in identifier_map:
+        return identifier_map[og]
+
+    iden = og
+
+    iden = "_".join(WHITESPACE_RE.split(iden))
+    iden = INVALID_CHARS_RE.sub("", iden)
+
+    # remove ugly leading and trailing underscores, and convert to lowercase
+    # (in most cases, this converts to snake case)
+    # any concerns with naming conflicts are solved at the end of the script, by appending a number
+    iden = iden.strip('_').lower()
+
+    if iden in KEYWORDS or iden in get_blocknames():
+        iden += "_"
+
+    # any still invalid names can be solved by adding an underscore. e.g. '' -> '_', or '2swap' -> '_2swap'
+    if iden == '' or iden[0] in "0123456789":
+        iden = '_' + iden
+
+    i = 2 # identifier_1 would be the original one, i.e. #1, so it doesnt need an index.
+    new_iden = iden
+    while new_iden in identifier_map.values():
+        new_iden = f"{iden}{i}"
+        i += 1
+
+    identifier_map[og] = new_iden
+    logging.info(f"Mapped identifier {og!r} -> {new_iden!r}")
+
+    return new_iden
 
 
 def string(text: str) -> str:
