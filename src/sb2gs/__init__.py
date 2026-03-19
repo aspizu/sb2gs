@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 import functools
-from argparse import ArgumentParser, ArgumentTypeError
+import logging
+import sys
+from argparse import ArgumentParser
 from pathlib import Path
-from sys import stderr
 from time import perf_counter_ns
 from typing import TYPE_CHECKING
 
@@ -11,11 +10,13 @@ from rich import print
 
 from ._logging import setup_logging
 from .decompile import decompile
-from .errors import Error
+from .sb3_downloader import download_sb3
 from .verify import verify
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+logger = logging.getLogger(__name__)
 
 
 def entrypoint(func: Callable[[], None]) -> Callable[[], int]:
@@ -23,12 +24,7 @@ def entrypoint(func: Callable[[], None]) -> Callable[[], int]:
     def wrapper() -> int:
         before = perf_counter_ns()
         success = True
-        try:
-            func()
-        except Error as error:
-            stderr.write(f"error: {error}\n")
-            stderr.flush()
-            success = False
+        func()
         after = perf_counter_ns()
         color = "[green]" if success else "[red]"
         print(f"[dim][bold]{color}Finished[/] in {(after - before) / 1e6}ms")
@@ -39,33 +35,11 @@ def entrypoint(func: Callable[[], None]) -> Callable[[], int]:
     return wrapper
 
 
-def input_type(value: str) -> Path:
-    path = Path(value)
-    if path.suffix != ".sb3":
-        msg = "must have file extension .sb3"
-        raise ArgumentTypeError(msg)
-    if not path.exists():
-        msg = "file does not exist"
-        raise ArgumentTypeError(msg)
-    if not path.is_file():
-        msg = "is not a file"
-        raise ArgumentTypeError(msg)
-    return path
-
-
-def output_type(value: str) -> Path:
-    path = Path(value)
-    if path.is_file():
-        msg = "exists, and is a file"
-        raise ArgumentTypeError(msg)
-    return path
-
-
 def determine_output_path(input: Path, output: Path | None, overwrite: bool) -> Path:
     output = output or input.parent.joinpath(input.stem)
     if output.exists() and not overwrite:
-        msg = "output directory already exists. (use --overwrite to overwrite)"
-        raise Error(msg)
+        logger.error("output directory already exists. (use --overwrite to overwrite)")
+        sys.exit(1)
     return output
 
 
@@ -73,9 +47,10 @@ def determine_output_path(input: Path, output: Path | None, overwrite: bool) -> 
 def main() -> None:
     setup_logging()
     argparser = ArgumentParser("sb2gs")
-    argparser.add_argument("input", type=input_type)
-    argparser.add_argument("output", nargs="?", type=output_type)
+    argparser.add_argument("input", type=Path)
+    argparser.add_argument("output", nargs="?", type=Path)
     argparser.add_argument("--overwrite", action="store_true")
+    argparser.add_argument("--id", type=str, help="Download the project with this ID.")
     argparser.add_argument(
         "--verify",
         action="store_true",
@@ -83,7 +58,12 @@ def main() -> None:
         "not indicate that the decompiled code is equivalent to the original.",
     )
     args = argparser.parse_args()
+    if args.input.suffix != ".sb3":
+        logger.error("input must be a `.sb3` file.")
+        sys.exit(1)
     args.output = determine_output_path(args.input, args.output, args.overwrite)
+    if args.id and not args.input.exists():
+        download_sb3(args.id, args.input)
     decompile(args.input, args.output)
     if args.verify:
         verify(args.output)

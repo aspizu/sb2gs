@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import ast, syntax
+from . import _ast, syntax
 from .decompile_events import decompile_events
 from .string_builder import StringBuilder
 
@@ -14,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class Ctx(StringBuilder):
-    def __init__(self, target: JSONObject, indent_width: int = 4) -> None:
-        super().__init__(indent_width)
+    def __init__(self, target: JSONObject, assets: dict[str, str]) -> None:
+        super().__init__()
         self.is_stage: bool = target.isStage
         self.costumes: list[JSONObject] = target.costumes
         self.sounds: list[JSONObject] = target.sounds
@@ -23,7 +22,7 @@ class Ctx(StringBuilder):
         self.lists: JSONObject = target.lists
         self.blocks: dict[str, Block] = target.blocks._
         self.volume: float = target.volume
-        self.layer_order: int = target.layerOrder
+        self.assets: dict[str, str] = assets
         if not self.is_stage:
             self.visible: bool = target.visible
             self.x: float = target.x
@@ -49,11 +48,10 @@ def decompile_constexpr(ctx: Ctx, value: object) -> None:
 
 
 def decompile_asset(ctx: Ctx, asset: JSONObject) -> None:
-    ctx.print(
-        syntax.string("assets/" + asset.md5ext),
-        " as ",
-        syntax.string(asset.name),
-    )
+    name = ctx.assets[asset.md5ext]
+    ctx.print(syntax.string("assets/" + name))
+    if Path(name).stem != asset.name:
+        ctx.print(" as ", syntax.string(asset.name))
 
 
 def decompile_common_properties(ctx: Ctx) -> None:
@@ -69,7 +67,6 @@ DEFAULT_DIRECTION = 90
 
 
 def decompile_sprite_properties(ctx: Ctx) -> None:
-    ctx.iprintln("set_layer_order ", syntax.number(ctx.layer_order), ";")
     if not ctx.visible:
         ctx.iprintln("hide;")
     if ctx.x != DEFAULT_X:
@@ -133,7 +130,7 @@ def decompile_lists(ctx: Ctx) -> None:
 
 
 def decompile_sprite(ctx: Ctx) -> None:
-    ast.transform(ctx)
+    _ast.transform(ctx)
     decompile_properties(ctx)
     decompile_costumes(ctx)
     decompile_sounds(ctx)

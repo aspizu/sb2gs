@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from typing import TYPE_CHECKING
 
@@ -23,8 +21,8 @@ def decompile_input(ctx: Ctx, input_name: str, block: Block) -> None:
         decompile_expr(ctx, ctx.blocks[block_id])
         return
     input_type = InputType(input[1][0])
-    input_value: str = input[1][1]
-    assert isinstance(input_value, str)
+    input_value = input[1][1]
+    assert isinstance(input_value, (str, int, float))
     if input_type in {InputType.VAR, InputType.LIST}:
         ctx.print(syntax.identifier(input_value))
         return

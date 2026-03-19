@@ -1,11 +1,10 @@
-from __future__ import annotations
-
+import contextlib
 import json
 import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-import toml
+import tomlkit
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -17,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Config:
+    layers: list[str] | None = None
     std: str | None = None
     bitmap_resolution: int | None = 2
     frame_rate: int | None = None
@@ -38,22 +38,22 @@ def find_turbowarp_config_comment(project: JSONObject) -> str | None:
 
 
 def parse_turbowarp_config_comment(text: str | None) -> dict[str, Any] | None:
-    if text is None:
-        return None
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1:
-        return None
-    try:
-        return json.loads(text[start : end + 1])
-    except json.JSONDecodeError:
-        return None
+    if text and (start := text.find("{")) != -1 and (end := text.rfind("}")) != -1:
+        with contextlib.suppress(json.JSONDecodeError):
+            return json.loads(text[start : end + 1])
+    return None
 
 
-def decompile_config(project: JSONObject, output: Path) -> None:
+def get_layers(project: JSONObject) -> list[str]:
+    layers = sorted(project.targets, key=lambda target: target.layerOrder)
+    return [layer.name for layer in layers if layer.name != "Stage"]
+
+
+def decompile_config(project: JSONObject) -> Config:
     config = Config()
     data = parse_turbowarp_config_comment(find_turbowarp_config_comment(project)) or {}
     runtime_options = data.get("runtimeOptions", {})
+    config.layers = get_layers(project)
     config.frame_rate = data.get("framerate")
     config.max_clones = runtime_options.get("maxClones")
     config.no_miscellaneous_limits = runtime_options.get("miscLimits") is False
@@ -62,5 +62,13 @@ def decompile_config(project: JSONObject, output: Path) -> None:
     config.high_quality_pen = data.get("hq") is True
     config.stage_width = data.get("width")
     config.stage_height = data.get("height")
+    return config
+
+
+def write_config(config: Config, output: Path) -> None:
+    doc = tomlkit.document()
+    for key, value in config.__dict__.items():
+        if value is not None:
+            doc.add(key, value)
     with output.joinpath("goboscript.toml").open("w") as file:
-        toml.dump(config.__dict__, file)
+        tomlkit.dump(doc, file)

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import contextlib
 import functools
 import itertools
@@ -7,7 +5,7 @@ import json
 import logging
 import re
 
-WHITESPACE_RE = re.compile(r"[\s.\-]+")
+WHITESPACE_RE = re.compile(r"[\s.\-:]+")
 INVALID_CHARS_RE = re.compile(r"[^a-zA-Z_0-9]")
 
 KEYWORDS = {
@@ -110,16 +108,16 @@ def identifier(og: str) -> str:
     # remove ugly leading and trailing underscores, and convert to lowercase
     # (in most cases, this converts to snake case)
     # any concerns with naming conflicts are solved at the end of the script, by appending a number
-    iden = iden.strip('_').lower()
+    iden = iden.strip("_").lower()
 
     if iden in KEYWORDS or iden in get_blocknames():
         iden += "_"
 
     # any still invalid names can be solved by adding an underscore. e.g. '' -> '_', or '2swap' -> '_2swap'
-    if iden == '' or iden[0] in "0123456789":
-        iden = '_' + iden
+    if iden == "" or iden[0] in "0123456789":
+        iden = "_" + iden
 
-    i = 2 # identifier_1 would be the original one, i.e. #1, so it doesnt need an index.
+    i = 2  # identifier_1 would be the original one, i.e. #1, so it doesnt need an index.
     new_iden = iden
     while new_iden in identifier_map.values():
         new_iden = f"{iden}{i}"
@@ -146,7 +144,9 @@ def is_goboscript_literal(text: str) -> bool:
     return False
 
 
-def value(text: str) -> str:
+def value(text: float | str) -> str:
+    if isinstance(text, (int, float)):
+        return number(text)
     if is_goboscript_literal(text):
         return text
     return string(text)

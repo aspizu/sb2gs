@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import contextlib
 import logging
 from copy import deepcopy
@@ -7,7 +5,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from . import ast, inputs, syntax
+from . import _ast, inputs, syntax
 from ._types import Signature
 from .utils import unwrap
 
@@ -208,7 +206,7 @@ def decompile_block(ctx: Ctx, block: Block) -> None:
 
     signature = deepcopy(BLOCKS[block.opcode])
     if signature.menu:
-        ast.flatten_menu(ctx, block, signature.menu)
+        _ast.flatten_menu(ctx, block, signature.menu)
     if field := block.fields._.get(signature.field or ""):
         if opcode := unwrap(signature.overloads).get(field[0]):
             signature.opcode = opcode
