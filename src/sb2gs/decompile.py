@@ -24,12 +24,11 @@ def get_asset_names(project: JSONObject, key: str) -> dict[str, str]:
     for asset in itertools.chain(*(target._[key] for target in project.targets)):
         if asset.md5ext in assets:
             continue
+        i = 2
         filename = get_asset_filename(asset.name, asset.md5ext)
-        if filename in filenames:
-            i = 2
-            while (newname := f"{filename} ({i})") in filenames:
-                i += 1
-            filename = newname
+        while filename in filenames:
+            filename = get_asset_filename(f"{asset.name} ({i})", asset.md5ext)
+            i += 1
         assets[asset.md5ext] = filename
         filenames[filename] = asset.md5ext
     return assets
