@@ -43,7 +43,7 @@ def fix_bitmap_center(costume: JSONObject, path: Path) -> None:
     ):
         return
     fixed = Image.new("RGBA", (960, 720), (0, 0, 0, 0))
-    fixed.paste(img, (480 - costume.rotationCenterX, 360 - costume.rotationCenterY))
+    fixed.paste(img, (int(480 - costume.rotationCenterX), int(360 - costume.rotationCenterY)))
     fixed.save(path, format=costume.dataFormat)
 
 
