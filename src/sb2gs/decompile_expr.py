@@ -148,7 +148,7 @@ BLOCKS = {
                                     overloads={
                                         "_mouse_": "distance_to_mouse_pointer",
                                     }),
-    "sensing_touchingobject":       _("touching_mouse_pointer", [],
+    "sensing_touchingobject":       _("touching", ["TOUCHINGOBJECTMENU"],
                                     menu="TOUCHINGOBJECTMENU",
                                     field="TOUCHINGOBJECTMENU", overloads={
                                         "_mouse_": "touching_mouse_pointer",
