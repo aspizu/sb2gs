@@ -143,7 +143,7 @@ BLOCKS = {
     # Sound
     "sound_volume":                 _("volume", []),
     # Sensing
-    "sensing_distanceto":           _("distance_to_mouse_pointer", [],
+    "sensing_distanceto":           _("distance_to", ["DISTANCETOMENU"],
                                     menu="DISTANCETOMENU", field="DISTANCETOMENU",
                                     overloads={
                                         "_mouse_": "distance_to_mouse_pointer",
