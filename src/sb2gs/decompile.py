@@ -1,3 +1,4 @@
+import itertools
 import json
 import shutil
 import sys
@@ -10,13 +11,27 @@ from .decompile_sprite import Ctx, decompile_sprite
 from .json_object import JSONObject
 
 
+def get_asset_filename(name: str, md5ext: str) -> str:
+    name = "forward-slash" if name == "/" else name.replace("/", "")
+    if sys.platform == "win32" or name == "":
+        name = md5ext[:8]
+    return name + Path(md5ext).suffix
+
+
 def get_asset_names(project: JSONObject, key: str) -> dict[str, str]:
     assets: dict[str, str] = {}
-    for asset in (asset for target in project.targets for asset in target._[key]):
-        name = asset.name.replace("/", "") + Path(asset.md5ext).suffix
-        if sys.platform == "win32" or assets.get(name, asset.md5ext) != asset.md5ext:
-            name = asset.md5ext
-        assets[asset.md5ext] = name
+    filenames: dict[str, str] = {}
+    for asset in itertools.chain(*(target._[key] for target in project.targets)):
+        if asset.md5ext in assets:
+            continue
+        filename = get_asset_filename(asset.name, asset.md5ext)
+        if filename in filenames:
+            i = 2
+            while (newname := f"{filename} ({i})") in filenames:
+                i += 1
+            filename = newname
+        assets[asset.md5ext] = filename
+        filenames[filename] = asset.md5ext
     return assets
 
 
