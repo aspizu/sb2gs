@@ -34,6 +34,23 @@ def get_asset_names(project: JSONObject, key: str) -> dict[str, str]:
     return assets
 
 
+def sanitize_sprite_name(name: str) -> str:
+    return name.replace("/", "_")
+
+
+def rename_sprites(project: JSONObject, name_map: dict[str, str]) -> None:
+    """Update sprite names and block field references to renamed sprites in-place."""
+    for target in project.targets:
+        if target.name in name_map:
+            target._["name"] = name_map[target.name]
+        for block in target.blocks._.values():
+            if not isinstance(block, JSONObject):
+                continue
+            for field_values in block.fields._.values():
+                if isinstance(field_values, list) and field_values and field_values[0] in name_map:
+                    field_values[0] = name_map[field_values[0]]
+
+
 def decompile(input: Path, output: Path) -> None:
     shutil.rmtree(output, ignore_errors=True)
     output.mkdir(parents=True, exist_ok=True)
@@ -48,6 +65,9 @@ def decompile(input: Path, output: Path) -> None:
                 shutil.copyfileobj(src, dest)
     stage = next(target for target in project.targets if target.isStage)
     sprites = [target for target in project.targets if not target.isStage]
+    name_map = {t.name: sanitize_sprite_name(t.name) for t in sprites if "/" in t.name}
+    if name_map:
+        rename_sprites(project, name_map)
     ctx = Ctx(stage, assets)
     with output.joinpath("stage.gs").open("w") as file:
         decompile_sprite(ctx)
