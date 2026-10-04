@@ -1,7 +1,7 @@
 # sb2gs
 
-Decompile Scratch projects into [**goboscript**](https://github.com/aspizu/goboscript) 
-projects automatically.
+Decompile Scratch projects into
+[**goboscript**](https://github.com/aspizu/goboscript) projects automatically.
 
 ### Installation
 
@@ -10,6 +10,11 @@ Use [uv](https://docs.astral.sh/uv) to install sb2gs globally.
 ```bash
 uv tool install git+https://github.com/aspizu/sb2gs
 ```
+
+You can also use [nix flakes](https://wiki.nixos.org/wiki/Flakes) to install and
+develop sb2gs. The provided flake exports `packages.${system}.default` for
+installation, and provides a devShell (accessible in repo using `nix develop`)
+which builds an `editable` version of sb2gs.
 
 ### Usage
 
